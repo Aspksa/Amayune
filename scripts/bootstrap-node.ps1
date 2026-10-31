@@ -20,7 +20,7 @@ try {
     if(-not(Test-Path -LiteralPath $bin -PathType Leaf)){continue}
     $v=& $bin -p 'process.versions.node' 2>$null
     if($LASTEXITCODE -eq 0 -and [version]$v -ge $min) {
-      Set-Content -LiteralPath (Join-Path $runtime 'node-path.txt') -Value $bin -Encoding UTF8
+      Set-Content -LiteralPath (Join-Path $runtime 'node-path.txt') -Value $(if($bin -eq (Join-Path $runtime 'node\node.exe')){'.runtime\node\node.exe'}else{'node.exe'}) -Encoding ASCII
       exit 0
     }
   }
@@ -41,6 +41,6 @@ try {
   $dest=Join-Path $runtime 'node'
   if(Test-Path -LiteralPath $dest){throw 'Existing runtime is incompatible. Refusing overwrite.'}
   Move-Item -LiteralPath $binary.Directory.FullName -Destination $dest
-  Set-Content -LiteralPath (Join-Path $runtime 'node-path.txt') -Value (Join-Path $dest 'node.exe') -Encoding UTF8
+  Set-Content -LiteralPath (Join-Path $runtime 'node-path.txt') -Value '.runtime\node\node.exe' -Encoding ASCII
   exit 0
 } catch { [Console]::Error.WriteLine("[NODE] $($_.Exception.Message)");exit 4 }
