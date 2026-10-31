@@ -13,5 +13,5 @@ test('2xx ready, 503 not ready',async()=>{
   }finally{await new Promise(r=>server.close(r));}
 });
 test('refuses non-loopback health checks',async()=>{
-  await assert.rejects(()=>health('http://example.com/health'),/loopback/);
+  assert.throws(()=>health('http://example.com/health'),/loopback/);
 });
