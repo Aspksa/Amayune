@@ -11,7 +11,12 @@ powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "scripts
 if errorlevel 1 goto bootstrap_error
 if not exist ".runtime\node-path.txt" goto bootstrap_error
 set /p NODE_EXE=<".runtime\node-path.txt"
-if not exist "%NODE_EXE%" goto bootstrap_error
+if /i "%NODE_EXE%"=="node.exe" (
+  where node.exe >nul 2>&1
+  if errorlevel 1 goto bootstrap_error
+) else (
+  if not exist "%NODE_EXE%" goto bootstrap_error
+)
 
 chcp 65001 >nul
 "%NODE_EXE%" "scripts\launch.mjs" %*
