@@ -1,0 +1,23 @@
+{
+  "start": {
+    "script": "start:server"
+  },
+  "health": {
+    "path": "/health",
+    "timeoutMs": 30000
+  },
+  "python": {
+    "required": false,
+    "minimum": "3.11.0"
+  },
+  "build": {
+    "script": "build",
+    "inputs": [
+      "src/index.ts",
+      "tsconfig.json"
+    ],
+    "outputs": [
+      "dist/index.js"
+    ]
+  }
+}
