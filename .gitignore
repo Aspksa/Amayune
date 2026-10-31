@@ -1,0 +1,9 @@
+.runtime/
+logs/
+data/
+node_modules/
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite*
