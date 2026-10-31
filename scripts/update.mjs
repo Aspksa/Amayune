@@ -25,6 +25,7 @@ export function applyUpdate(manifestFile){
   });
   const backup=join(root,'.runtime','backups',new Date().toISOString().replace(/[:.]/g,'-'));
   const completed=[];
+  mkdirSync(backup,{recursive:true});
   try{
     for(const c of changes){
       const old=join(backup,c.path);
