@@ -27,6 +27,20 @@ export function reflect({answer='',feedback=''}={}){
  if(feedback)notes.push('review-user-correction');
  return {notes,requiresReview:notes.length>0};
 }
+export function relevantMemories(message,items,limit=8){
+ const words=new Set(String(message).toLocaleLowerCase().match(/[\p{L}\p{N}]{3,}/gu)||[]);
+ return items.map((item,index)=>{
+  const text=Object.values(item).join(' ').toLocaleLowerCase();
+  const hits=[...words].filter(w=>text.includes(w)).length;
+  return {item,index,hits};
+ }).sort((a,b)=>b.hits-a.hits||a.index-b.index).slice(0,limit).map(x=>x.item);
+}
+export function assessSoulAnswer(answer,{evidence=[]}={}){
+ const result=reflect({answer});const warnings=[...result.notes];
+ if(/(?:всегда|никогда|100%|гарантирую)/i.test(String(answer)))warnings.push('absolute-claim');
+ if(/(?:я помню|ты говорил|ты говорила)/i.test(String(answer))&&!evidence.length)warnings.push('unsupported-memory-claim');
+ return {ok:!!String(answer).trim()&&!warnings.includes('verify-action-claim'),warnings};
+}
 export function createSoulStore(root){
  mkdirSync(join(root,'data'),{recursive:true});
  const db=new DatabaseSync(join(root,'data','soul.db'));
@@ -37,7 +51,7 @@ export function createSoulStore(root){
  CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
  CREATE INDEX IF NOT EXISTS idx_preferences_topic ON preferences(topic);`);
  return {
-  remember(topic,detail,source='explicit-user'){if(source!=='explicit-user')throw Error('Unverified memory requires user confirmation');const id=randomUUID();db.prepare('INSERT INTO preferences VALUES(?,?,?,?,?)').run(id,clean(topic,100),clean(detail),source,Date.now());return id},
+  remember(topic,detail,source='explicit-user'){if(source!=='explicit-user')throw Error('Unverified memory requires user confirmation');const key=clean(topic,100).toLocaleLowerCase();if(!key)throw Error('Empty topic');const value=clean(detail);if(!value)throw Error('Empty detail');db.prepare('DELETE FROM preferences WHERE topic=?').run(key);const id=randomUUID();db.prepare('INSERT INTO preferences VALUES(?,?,?,?,?)').run(id,key,value,source,Date.now());return id},
   preferences(limit=30){return db.prepare('SELECT topic,detail,source FROM preferences ORDER BY updated DESC LIMIT ?').all(Math.max(1,Math.min(100,limit)))},
   correct(original,correction){db.prepare('INSERT INTO corrections VALUES(?,?,?,?)').run(randomUUID(),clean(original),clean(correction),Date.now())},
   corrections(){return db.prepare('SELECT original,correction FROM corrections ORDER BY created DESC LIMIT 30').all()},
@@ -49,7 +63,7 @@ export function createSoulStore(root){
  };
 }
 export function buildSoulContext({message='',preferences=[],corrections=[],reflections=[]}={}){
- const safe=items=>items.slice(0,20).map(item=>JSON.stringify(item).slice(0,500)).join('\n');
+ const safe=items=>relevantMemories(message,items,8).map(item=>JSON.stringify(item).slice(0,500)).join('\n');
  return [
   'Identity: '+SOUL_IDENTITY.name+'; AI assistant, not a human.',
   'Traits: '+SOUL_IDENTITY.traits.join(', '),
