@@ -15,6 +15,7 @@ function fixture(root,contents='verified'){
  mkdirSync(join(stage,'web'),{recursive:true});
  writeFileSync(join(stage,'web','app.js'),contents);
  writeFileSync(join(stage,'manifest.json'),JSON.stringify({signatureAlgorithm:'ed25519',files,signature}));
+ writeFileSync(join(stage,'source.json'),JSON.stringify({sha}));
 }
 test('installation requires signed and verified staging, and queues only once',()=>{
  const root=mkdtempSync(join(tmpdir(),'amayune-lifecycle-'));
