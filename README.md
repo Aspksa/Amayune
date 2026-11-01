@@ -6,7 +6,7 @@ The repo currently contains launcher infrastructure, **not** a runnable web appl
 
 1. Add the application, `package.json`, and committed `package-lock.json`.
 2. Copy `launcher.config.example.json` to `launcher.config.json` and configure the real npm start script, build outputs, and HTTP health endpoint.
-3. Double-click `Project.bat` or the compatible `Amayune.bat` alias.
+3. Double-click `Amayune.bat` .
 
 The server must accept `HOST=127.0.0.1`, `PORT`, and `AMAYUNE_DATA_DIR`. The browser opens only after an HTTP 2xx health response. Run logs are saved to `logs/launch.jsonl` and user data belongs in `data/`.
 
