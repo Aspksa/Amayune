@@ -23,3 +23,5 @@ aside{display:flex;flex-direction:column}
 
 /* Consistent focus, navigation and status */
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px}button:disabled{opacity:.55;cursor:not-allowed}#status{max-width:100%;overflow-wrap:anywhere}.settings-nav[aria-expanded=true]{border-color:var(--accent)}.connection-message{overflow-wrap:anywhere}html{scroll-behavior:smooth}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}@media(max-width:820px){.sidebar-bottom nav{width:100%}.sidebar-bottom .settings-nav{max-width:100%}}
+
+.diagnostic-output{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:17px;max-height:360px;overflow:auto;color:var(--text);font-size:.84rem}.file-button:focus-within{outline:2px solid var(--accent);outline-offset:3px}
