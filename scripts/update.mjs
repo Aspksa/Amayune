@@ -1,3 +1,4 @@
+import {validateSignedManifest,inspectStagedFiles} from './update-validation.mjs';
 import {readFileSync,existsSync,mkdirSync,copyFileSync,rmSync,writeFileSync,lstatSync,realpathSync} from 'node:fs';
 import {join,dirname,resolve,relative} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -9,20 +10,18 @@ function valid(p){
 }
 export function applyUpdate(manifestFile){
   const manifest=JSON.parse(readFileSync(manifestFile,'utf8'));
-  // A checksum is not an authenticity proof. Refuse unsigned updates.
-  if(manifest.signatureAlgorithm!=='ed25519'||typeof manifest.signature!=='string'||!process.env.AMAYUNE_UPDATE_PUBLIC_KEY)throw Error('Update rejected: signed manifest and trusted public key required');
-  const canonical=JSON.stringify({files:manifest.files});
-  if(!verify(null,Buffer.from(canonical),createPublicKey(process.env.AMAYUNE_UPDATE_PUBLIC_KEY),Buffer.from(manifest.signature,'base64')))throw Error('Invalid update signature');
-  if(!Array.isArray(manifest.files)||manifest.files.length===0)throw Error('Empty update manifest');
+  const files=validateSignedManifest(manifest,process.env.AMAYUNE_UPDATE_PUBLIC_KEY);
+  inspectStagedFiles(join(root,'.runtime','updates','staged'),files);
   const stage=join(root,'.runtime','updates','staged');
   const seen=new Set();
-  const changes=manifest.files.map(x=>{
+  const changes=files.map(x=>{
     if(!valid(x.path)||seen.has(x.path)||!/^[a-f0-9]{64}$/i.test(x.sha256))throw Error('Unsafe update entry');
     seen.add(x.path);
     const src=resolve(stage,x.path),dst=resolve(root,x.path);
     if(relative(stage,src).startsWith('..')||relative(root,dst).startsWith('..'))throw Error('Path escape');
     if(!existsSync(src)||lstatSync(src).isSymbolicLink())throw Error('Missing or linked source');
-    if(existsSync(dst)&&lstatSync(dst).isSymbolicLink())throw Error('Linked target refused');
+    let ancestor=root;
+    for(const segment of x.path.split('/')){ancestor=join(ancestor,segment);if(existsSync(ancestor)&&lstatSync(ancestor).isSymbolicLink())throw Error('Linked target refused');}
     const hash=createHash('sha256').update(readFileSync(src)).digest('hex');
     if(hash.toLowerCase()!==x.sha256.toLowerCase())throw Error('Hash mismatch: '+x.path);
     return{src,dst,path:x.path,exists:existsSync(dst)};
