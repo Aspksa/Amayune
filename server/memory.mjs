@@ -24,7 +24,7 @@ export async function openMemory(root){
   knowledge(){return db.prepare('SELECT id,content,source,created,verified FROM knowledge ORDER BY created DESC LIMIT 200').all()},
   verifyKnowledge(id,verified){if(typeof id!=='string'||typeof verified!=='boolean')throw Object.assign(Error('Некорректный запрос'),{status:400});const result=db.prepare('UPDATE knowledge SET verified=? WHERE id=?').run(verified?1:0,id);if(!result.changes)throw Object.assign(Error('Запись не найдена'),{status:404});return {id,verified}},
   removeKnowledge(id){const result=db.prepare('DELETE FROM knowledge WHERE id=?').run(id);return {deleted:result.changes>0}},
-  recall(query){if(typeof query!=='string')return [];const words=[...new Set((query.toLowerCase().match(/[\\p{L}\\p{N}]{3,}/gu)||[]).slice(-40))];if(!words.length)return [];const rows=db.prepare('SELECT id,content,source FROM knowledge WHERE verified=1 ORDER BY created DESC LIMIT 1000').all();return rows.map(r=>({...r,score:words.reduce((n,w)=>n+(r.content.toLowerCase().includes(w)?1:0),0)})).filter(r=>r.score>0).sort((a,b)=>b.score-a.score).slice(0,5).map(({id,content,source})=>({id,content:content.slice(0,2500),source}))},
+  recall(query){if(typeof query!=='string')return [];const words=[...new Set((query.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu)||[]).slice(-40))];if(!words.length)return [];const rows=db.prepare('SELECT id,content,source FROM knowledge WHERE verified=1 ORDER BY created DESC LIMIT 1000').all();return rows.map(r=>({...r,score:words.reduce((n,w)=>n+(r.content.toLowerCase().includes(w)?1:0),0)})).filter(r=>r.score>0).sort((a,b)=>b.score-a.score).slice(0,5).map(({id,content,source})=>({id,content:content.slice(0,2500),source}))},
   close(){db.close()}
  };
 }
