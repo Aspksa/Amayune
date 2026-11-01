@@ -1,0 +1,12 @@
+{
+  "start": {
+    "script": "start:server"
+  },
+  "health": {
+    "path": "/health",
+    "timeoutMs": 30000
+  },
+  "python": {
+    "required": false
+  }
+}
