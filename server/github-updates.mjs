@@ -27,8 +27,19 @@ export async function checkGitHubUpdate(root,fetcher=fetch){
  const sha=branch?.commit?.sha;
  if(!shaPattern.test(sha||''))throw Object.assign(Error('GitHub вернул неверную версию'),{status:502});
  const result=await github('/commits/'+sha+'/check-runs?per_page=100',fetcher);
- const runs=(result.check_runs||[]).filter(x=>x.app?.slug!=='dependabot');
- const ci=ciState(runs);
+ let runs=(result.check_runs||[]).filter(x=>x.app?.slug!=='dependabot');
+ let ci=ciState(runs);
+ // PR-only workflows are attached to the merged PR head, not always the main merge commit.
+ // Only trust the second parent of the exact main commit GitHub returned.
+ if(ci==='none'){
+  const commit=await github('/commits/'+sha,fetcher);
+  const parent=commit?.parents?.[1]?.sha;
+  if(shaPattern.test(parent||'')){
+   const previous=await github('/commits/'+parent+'/check-runs?per_page=100',fetcher);
+   runs=(previous.check_runs||[]).filter(x=>x.app?.slug!=='dependabot');
+   ci=ciState(runs);
+  }
+ }
  const installed=installedVersion(root);
  return {repository:'Aspksa/Amayune',sha,installed,updateAvailable:installed!==sha,ci,canInstall:ci==='success'&&Boolean(process.env.AMAYUNE_UPDATE_PUBLIC_KEY),signatureRequired:true,checkedAt:new Date().toISOString()};
 }
