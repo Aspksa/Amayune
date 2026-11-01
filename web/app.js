@@ -99,6 +99,7 @@ function searchSettings(q){
    if(matches&&term){d.open=true;if(!target){target=id;first=d;}}
   }
  }
+ if(term&&!target){for(const id of sections){const section=document.getElementById(id);if(section.textContent.toLocaleLowerCase('ru').includes(term)){target=id;break;}}}
  if(term&&target){page(target);first?.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
  if(term&&!target)notify('Совпадений не найдено');
  document.getElementById('searchEmpty').hidden=!(term&&!target);
