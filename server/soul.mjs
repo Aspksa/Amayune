@@ -28,7 +28,7 @@ export function reflect({answer='',feedback=''}={}){
  return {notes,requiresReview:notes.length>0};
 }
 export function relevantMemories(message,items,limit=8){
- const words=new Set(String(message).toLocaleLowerCase().match(/[\\p{L}\\p{N}]{3,}/gu)||[]);
+ const words=new Set(String(message).toLocaleLowerCase().match(/[\p{L}\p{N}]{3,}/gu)||[]);
  return items.map((item,index)=>{
   const text=Object.values(item).join(' ').toLocaleLowerCase();
   const hits=[...words].filter(w=>text.includes(w)).length;
