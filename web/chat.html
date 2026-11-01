@@ -1,1 +1,140 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Amayune · Чат</title><link rel="stylesheet" href="/chat.css"><link rel="stylesheet" href="/avatar.css"><link rel="stylesheet" href="/premium-design.css"><link rel="stylesheet" href="/workspace.css"><link rel="stylesheet" href="/ux-polish.css"><link rel="stylesheet" href="/chat-functional.css"><link rel="stylesheet" href="/chat-markdown.css"><link rel="stylesheet" href="/juunibi-layout.css"><link rel="stylesheet" href="/chat-commands.css"><link rel="stylesheet" href="/chat-actions.css"></head><body><div class="shell"><aside class="sidebar"><div class="brand">✦ Amayune <span>Чат</span></div><nav class="workspace-nav" aria-label="Разделы Amayune"><button type="button" class="workspace-tab active" data-workspace="chat" aria-current="page">✦ Диалоги</button><button type="button" class="workspace-tab" data-workspace="memory">◈ Память</button><button type="button" class="workspace-tab" data-workspace="evolution">◇ Развитие</button><a class="workspace-settings" href="/">⚙ Настройки</a></nav><button id="new" class="new">＋ Новый чат</button><input id="search" type="search" placeholder="Поиск по истории" aria-label="Поиск по истории"><div id="history" class="history" aria-label="История чатов"></div><a class="back" href="/">← Настройки Amayune</a></aside><main class="main"><header><button id="toggle" aria-label="Открыть историю">☰</button><strong id="title">Новый чат</strong><div class="head-actions"><button id="command-open" type="button" title="Быстрые команды (Ctrl+K)" aria-label="Быстрые команды">⌕</button><button id="rename" title="Переименовать">✎</button><button id="export" title="Экспорт Markdown">↓</button><button id="delete" title="Удалить чат">⌫</button></div></header><div id="messages" class="messages" role="log" aria-live="polite"></div><section id="workspacePanel" class="workspace-panel" aria-label="Рабочий раздел" hidden><header class="workspace-panel-header"><div><small>AMAYUNE / РАБОЧЕЕ ПРОСТРАНСТВО</small><h2 id="workspaceTitle">Память</h2></div><button id="workspaceRefresh" type="button">Обновить</button></header><div id="workspaceControls"></div><div id="workspaceResults" role="status" aria-live="polite"></div></section><button id="scroll-latest" type="button" hidden aria-label="Перейти к последнему сообщению">↓ Последний ответ</button><div class="bottom"><div id="attachments" aria-live="polite"></div><div id="notice" role="status" aria-live="polite">Проверяем подключение Cloud.ru…</div><form id="composer"><textarea id="prompt" rows="2" maxlength="12000" placeholder="Напишите сообщение Amayune…" aria-label="Сообщение"></textarea><label title="Прикрепить файл">📎<input id="files" type="file" multiple accept=".txt,.md,.json,.csv,.log,.js,.ts,.py,.html,.css,.sql" hidden></label><button id="mic" type="button" title="Диктовка">🎙</button><button id="voice" type="button" title="Озвучивание ответов" aria-pressed="false">🔇</button><button id="stop-voice" type="button" title="Остановить голос">■</button><button id="stop-generation" type="button" hidden disabled aria-label="Остановить генерацию">■ Стоп</button><button id="send" type="submit">Отправить ↑</button></form><small>Enter — отправить · Shift+Enter — новая строка · Ctrl+Shift+O — новый чат</small></div></main></div><div id="command-palette" class="command-backdrop" hidden><section class="command-dialog" role="dialog" aria-modal="true" aria-label="Быстрые команды"><div class="command-header"><input id="command-search" type="search" placeholder="Найти команду…" aria-label="Поиск команды"><button id="command-close" type="button" aria-label="Закрыть">×</button></div><div id="command-results" class="command-results"></div><small>Ctrl+K — открыть · Esc — закрыть</small></section></div><script id="csrf" type="application/json">"__CSRF_TOKEN__"</script><script src="/workspace.js" defer></script><script src="/chat-markdown.js" defer></script><script src="/chat-extras.js" defer></script><script src="/chat.js" defer></script><script src="/avatar.js" defer></script><script src="/chat-commands.js" defer></script><script src="/chat-scroll.js" defer></script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Amayune · Чат</title>
+  <link rel="stylesheet" href="/chat.css">
+  <link rel="stylesheet" href="/avatar.css">
+  <link rel="stylesheet" href="/premium-design.css">
+  <link rel="stylesheet" href="/workspace.css">
+  <link rel="stylesheet" href="/ux-polish.css">
+  <link rel="stylesheet" href="/chat-functional.css">
+  <link rel="stylesheet" href="/chat-markdown.css">
+  <link rel="stylesheet" href="/juunibi-layout.css">
+  <link rel="stylesheet" href="/chat-commands.css">
+  <link rel="stylesheet" href="/chat-actions.css">
+  <link rel="stylesheet" href="/amayune-ui.css">
+</head>
+<body class="chat-page">
+  <a class="skip-link" href="#prompt">Перейти к сообщению</a>
+  <div class="shell">
+    <button id="sidebar-backdrop" class="sidebar-backdrop" type="button" aria-label="Закрыть историю" hidden></button>
+    <aside class="sidebar" aria-label="Навигация и история чатов">
+      <div class="brand">
+        <span class="brand-symbol" aria-hidden="true">✦</span>
+        <span class="brand-copy"><strong>Amayune</strong><small>Личный AI-помощник</small></span>
+        <button id="sidebar-close" class="sidebar-close" type="button" aria-label="Закрыть меню">×</button>
+      </div>
+      <nav class="workspace-nav" aria-label="Разделы Amayune">
+        <button type="button" class="workspace-tab active" data-workspace="chat" aria-current="page">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/></svg>
+          <span>Диалоги</span>
+        </button>
+        <button type="button" class="workspace-tab" data-workspace="memory">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3a7 7 0 0 0-7 7c0 2 1 3 2 4v4h10v-4c1-1 2-2 2-4a7 7 0 0 0-7-7Z"/><path d="M9 21h6M9 10h6M9 14h6"/></svg>
+          <span>Память</span>
+        </button>
+        <button type="button" class="workspace-tab" data-workspace="evolution">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/></svg>
+          <span>Развитие</span>
+        </button>
+      </nav>
+      <div class="chat-library">
+        <div class="library-heading"><span>Ваши диалоги</span><span id="chat-count" class="chat-count">0</span></div>
+        <button id="new" class="new" type="button">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Новый чат</span>
+        </button>
+        <label class="history-search">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <input id="search" type="search" placeholder="Найти диалог" aria-label="Поиск по истории">
+        </label>
+        <div id="history" class="history" aria-label="История чатов"></div>
+      </div>
+      <div class="sidebar-footer">
+        <a class="back workspace-settings" href="/">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
+          <span>Настройки</span>
+        </a>
+        <div class="local-note"><span></span>Данные хранятся локально</div>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="chat-header">
+        <button id="toggle" class="icon-button" type="button" aria-label="Открыть историю" aria-expanded="false" aria-controls="history">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div class="chat-heading"><strong id="title">Новый чат</strong><span id="header-status">Ваше рабочее пространство</span></div>
+        <div class="head-actions">
+          <button id="command-open" class="header-action" type="button" title="Быстрые команды (Ctrl+K)" aria-label="Быстрые команды">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span>Команды</span>
+          </button>
+          <button id="rename" class="header-action" type="button" title="Переименовать чат" aria-label="Переименовать чат">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m4 20 4-1 11-11-3-3L5 16l-1 4ZM14 7l3 3"/></svg><span>Переименовать</span>
+          </button>
+          <button id="export" class="header-action" type="button" title="Экспортировать в Markdown" aria-label="Экспортировать чат в Markdown">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 21h14"/></svg><span>Экспорт</span>
+          </button>
+          <button id="delete" class="header-action danger-action" type="button" title="Удалить чат" aria-label="Удалить чат">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m3 0-1 14H7L6 7m4 4v6m4-6v6"/></svg><span>Удалить</span>
+          </button>
+        </div>
+      </header>
+      <div id="messages" class="messages" role="log" aria-live="polite"></div>
+      <section id="workspacePanel" class="workspace-panel" aria-label="Рабочий раздел" hidden>
+        <header class="workspace-panel-header"><div><small>AMAYUNE / РАБОЧЕЕ ПРОСТРАНСТВО</small><h2 id="workspaceTitle">Память</h2></div><button id="workspaceRefresh" type="button">Обновить</button></header>
+        <div id="workspaceControls"></div>
+        <div id="workspaceResults" role="status" aria-live="polite"></div>
+      </section>
+      <button id="scroll-latest" type="button" hidden aria-label="Перейти к последнему сообщению">↓ Последний ответ</button>
+      <div class="bottom">
+        <div id="attachments" aria-live="polite"></div>
+        <div class="status-row">
+          <div id="notice" data-state="checking" role="status" aria-live="polite">Проверяем подключение Cloud.ru…</div>
+          <a id="connection-settings" href="/#connection">Настроить Cloud.ru</a>
+        </div>
+        <form id="composer">
+          <textarea id="prompt" rows="1" maxlength="12000" placeholder="Напишите сообщение…" aria-label="Сообщение"></textarea>
+          <div class="composer-toolbar">
+            <div class="composer-tools">
+              <label class="tool-button" title="Прикрепить текстовый файл">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m21 11-9 9a6 6 0 0 1-8-8l10-10a4 4 0 0 1 6 6L10 18a2 2 0 0 1-3-3l9-9"/></svg><span>Файл</span>
+                <input id="files" type="file" multiple accept=".txt,.md,.json,.csv,.log,.js,.ts,.py,.html,.css,.sql" hidden>
+              </label>
+              <button id="mic" class="tool-button" type="button" title="Начать диктовку" aria-label="Диктовка" aria-pressed="false">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg><span>Диктовка</span>
+              </button>
+              <button id="voice" class="tool-button" type="button" title="Озвучивать ответы" aria-label="Озвучивание ответов" aria-pressed="false">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4V5ZM15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></svg><span id="voice-label">Озвучка</span>
+              </button>
+              <button id="stop-voice" class="tool-button" type="button" title="Остановить озвучивание" aria-label="Остановить голос" hidden>
+                <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg><span>Стоп звук</span>
+              </button>
+            </div>
+            <button id="stop-generation" type="button" hidden disabled aria-label="Остановить генерацию">■ Стоп</button>
+            <button id="send" type="submit" aria-label="Отправить сообщение"><span>Отправить</span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 14-7-4 14-3-5-7-2Z"/></svg></button>
+          </div>
+        </form>
+        <div class="composer-meta"><span>Enter — отправить · Shift+Enter — новая строка</span><span id="character-count">0 / 12000</span></div>
+      </div>
+    </main>
+  </div>
+  <div id="command-palette" class="command-backdrop" hidden>
+    <section class="command-dialog" role="dialog" aria-modal="true" aria-label="Быстрые команды">
+      <div class="command-header"><input id="command-search" type="search" placeholder="Найти команду…" aria-label="Поиск команды"><button id="command-close" type="button" aria-label="Закрыть">×</button></div>
+      <div id="command-results" class="command-results"></div>
+      <small>Ctrl+K — открыть · Esc — закрыть</small>
+    </section>
+  </div>
+  <script id="csrf" type="application/json">"__CSRF_TOKEN__"</script>
+  <script src="/workspace.js" defer></script>
+  <script src="/chat-markdown.js" defer></script>
+  <script src="/chat-extras.js" defer></script>
+  <script src="/chat.js" defer></script>
+  <script src="/avatar.js" defer></script>
+  <script src="/chat-commands.js" defer></script>
+  <script src="/chat-scroll.js" defer></script>
+</body>
+</html>
