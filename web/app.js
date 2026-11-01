@@ -47,17 +47,17 @@ async function request(path,method='GET',data){const r=await fetch('/api/'+path,
 let cloud=null,models=[];
 function cloudFields(){document.querySelectorAll('[data-cloud]').forEach(el=>{el.value=el.type==='checkbox'?'':String(cloud[el.dataset.cloud]??'');if(el.type==='checkbox')el.checked=!!cloud[el.dataset.cloud];});}
 async function loadCloud(){try{const data=await request('settings');cloud=data.settings;cloudFields();cloudMessage(data.hasKey?'Ключ сохранён. Проверка не выполнялась.':'Ключ не сохранён');}catch(e){cloudMessage(e.message);}}
-let pending=Promise.resolve();
+let pending=Promise.resolve();let cloudRevision=0;
 document.querySelectorAll('[data-cloud]').forEach(el=>el.addEventListener('change',()=>{
  if(!cloud)return;
  const k=el.dataset.cloud;
  const v=el.type==='checkbox'?el.checked:el.type==='number'?Number(el.value):el.value;
- cloud={...cloud,[k]:v};
+ cloud={...cloud,[k]:v};const revision=++cloudRevision;
  notify('Сохранение Cloud.ru…');
  pending=pending.catch(()=>{}).then(async()=>{
   const snapshot={...cloud};
   try{const x=await request('settings','PUT',snapshot);notify('Параметры Cloud.ru сохранены');}
-  catch{try{const data=await request('settings');cloud=data.settings;cloudFields();}catch{}notify('Ошибка сохранения Cloud.ru: проверьте параметры');}
+  catch{if(revision===cloudRevision){try{const data=await request('settings');if(revision===cloudRevision){cloud=data.settings;cloudFields();}}catch{}}notify('Ошибка сохранения Cloud.ru: проверьте параметры');}
  });
 }));
 document.getElementById('showKey').onchange=e=>document.getElementById('apiKey').type=e.target.checked?'text':'password';
