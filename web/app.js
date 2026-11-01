@@ -200,6 +200,11 @@ async function checkUpdates(){
  const el=document.getElementById('updateStatus');const button=document.getElementById('checkUpdates');
  button.disabled=true;el.textContent='Проверяю GitHub и результаты CI…';
  try{const {update:u}=await request('update/check');
+ document.getElementById('updateInstalledVersion').textContent=u.installed?u.installed.slice(0,12):'Не определена';
+ document.getElementById('updateLatestVersion').textContent=u.sha.slice(0,12);
+ document.getElementById('updateLastChecked').textContent='Проверено: '+new Date(u.checkedAt).toLocaleString('ru-RU');
+ const ciBadge=document.getElementById('updateCiBadge');ciBadge.textContent='CI: '+({success:'успешно',pending:'выполняется',failure:'ошибка',none:'нет данных'}[u.ci]||'неизвестно');ciBadge.dataset.state=u.ci;
+ const signature=document.getElementById('updateSignatureBadge');signature.textContent=u.canInstall?'Подпись: ключ настроен':'Подпись: требуется доверенный ключ';signature.dataset.state=u.canInstall?'success':'';
  const state={success:'проверки пройдены',pending:'проверки выполняются',failure:'проверки не пройдены',none:'проверок нет'}[u.ci]||'неизвестно';
  el.textContent='GitHub: '+u.sha.slice(0,12)+' · CI: '+state+' · '+(u.installed?'Установлена: '+u.installed.slice(0,12):'Установленная версия не определена')+' · '+(u.updateAvailable?'Есть изменения':'Актуальная версия')+'. Для установки требуется подписанный пакет.';
  }catch(e){el.textContent='Ошибка проверки обновлений: '+e.message;}finally{button.disabled=false;}
@@ -238,7 +243,7 @@ document.getElementById('installUpdate').addEventListener('click',async()=>{
 
 function setUpdateProgress(active,label){
  const container=document.getElementById('updateProgress');
- container.style.display=active?'block':'none';
+ container.hidden=!active;
  document.getElementById('updateProgressText').textContent=label;
  const bar=document.getElementById('updateProgressBar');
  if(active)bar.removeAttribute('value');else bar.value=0;
@@ -251,17 +256,20 @@ async function loadUpdateHistory(){
  try{
   const {history}=await request('update/history');
   box.replaceChildren(...history.map(entry=>{
-   const row=document.createElement('div');row.className='backup-row';
-   const button=document.createElement('button');button.type='button';
-   button.textContent=entry.sha.slice(0,10)+' · '+entry.title+' · '+(entry.date?new Date(entry.date).toLocaleDateString('ru-RU'):'');
+   const button=document.createElement('button');button.type='button';button.className='update-history-entry';
+   button.setAttribute('aria-pressed','false');
+   const title=document.createElement('strong');title.textContent=entry.title||'Без описания';
+   const meta=document.createElement('small');meta.textContent=entry.sha.slice(0,10)+' · '+(entry.date?new Date(entry.date).toLocaleDateString('ru-RU'):'Дата неизвестна');
+   button.append(title,meta);
    button.onclick=async()=>{
+    box.querySelectorAll('.update-history-entry').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
     const output=document.getElementById('updateChangeList');output.textContent='Загружаю список изменений…';
     try{
      const {changes}=await request('update/changes?sha='+encodeURIComponent(entry.sha));
-     output.textContent=changes.message+'\n\n'+changes.files.map(f=>f.status+' · '+f.path+' (+'+f.additions+' / -'+f.deletions+')').join('\n');
+     output.textContent=changes.message+'\\n\\n'+changes.files.map(f=>({added:'Добавлен',modified:'Изменён',removed:'Удалён',renamed:'Переименован'}[f.status]||f.status)+' · '+f.path+' (+'+f.additions+' / -'+f.deletions+')').join('\\n');
     }catch(e){output.textContent='Ошибка: '+e.message;}
    };
-   row.append(button);return row;
+   return button;
   }));
   if(!history.length)box.textContent='История не найдена';
  }catch(e){box.textContent='Ошибка истории: '+e.message;}
