@@ -20,6 +20,8 @@ test('stage authenticated files from pinned GitHub commit',async()=>{
   assert.equal(result.files,1);
   assert.equal(readFileSync(join(root,'.runtime','updates','staged','web','new.js'),'utf8'),'safe');
   assert.ok(urls[0].includes('/'+sha+'/web/new.js'));
+  assert.equal(JSON.parse(readFileSync(join(root,'.runtime','updates','staged','manifest.json'),'utf8')).signature,manifest.signature);
+  await assert.rejects(stageSignedRelease({root,sha,manifest,publicKey,fetcher:async()=>response('safe')}),/already exists/);
  }finally{rmSync(root,{recursive:true,force:true});}
 });
 test('rejects tampered bytes without leaving staged files',async()=>{
