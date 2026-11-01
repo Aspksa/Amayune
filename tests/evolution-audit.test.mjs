@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {memoryAudit,measureProgress,initiativeTopic,createEvolutionAudit} from '../server/evolution-audit.mjs';
+test('memory audit detects duplicates only among approved entries',()=>{assert.deepEqual(memoryAudit([{id:'a',kind:'interest',status:'active',detail:' TypeScript '},{id:'b',kind:'interest',status:'active',detail:'typescript'},{id:'c',kind:'interest',status:'pending',detail:'typescript'}]).duplicates,['b'])});
+test('progress compares recent against older scores',()=>{assert.equal(measureProgress([90,90,90,50,50,50].map(score=>({score}))).trend,'improving');assert.equal(measureProgress([]).trend,'insufficient')});
+test('initiative rotates approved topics only',()=>{const entries=[{kind:'interest',status:'pending',detail:'secret'},{kind:'interest',status:'active',detail:'TypeScript'},{kind:'goal',status:'active',detail:'Rust'}];assert.equal(initiativeTopic(entries,[{topic:'TypeScript'}]),'Rust')});
+test('audit persists and deduplicates on restart',()=>{const root=mkdtempSync(join(tmpdir(),'amayune-audit-'));try{const turns=[90,90,90,50,50,50].map((score,i)=>({id:String(i),score}));let a=createEvolutionAudit(root,{getTurns:()=>turns,getEntries:()=>[]});assert.ok(a.tick());assert.equal(a.tick(),null);a.close();a=createEvolutionAudit(root,{getTurns:()=>turns,getEntries:()=>[]});assert.equal(a.tick(),null);assert.equal(a.reports().length,1);a.close()}finally{rmSync(root,{recursive:true,force:true})}});
