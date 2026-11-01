@@ -12,12 +12,26 @@
  }
  const sizeLabel=document.createElement('label');sizeLabel.textContent='Размер';
  const size=document.createElement('input');size.type='range';size.min='48';size.max='96';size.value='66';size.setAttribute('aria-label','Размер аватара');
- size.oninput=()=>{avatar.style.setProperty('--avatar-size',size.value+'px');try{localStorage.setItem('amayune.avatar.size',size.value)}catch{}};
+ size.oninput=()=>{avatar.style.setProperty('--avatar-size',size.value+'px');requestAnimationFrame(place);try{localStorage.setItem('amayune.avatar.size',size.value)}catch{}};
  sizeLabel.append(size);
  const close=document.createElement('button');close.type='button';close.textContent='Закрыть';close.onclick=()=>{panel.hidden=true;avatar.focus()};
  panel.append(heading,description,colors,sizeLabel,close);mount.append(avatar,panel);document.body.append(mount);
  try{const color=localStorage.getItem('amayune.avatar.color');if(/^#[0-9a-f]{6}$/i.test(color||''))avatar.style.setProperty('--avatar-color',color);const saved=Number(localStorage.getItem('amayune.avatar.size'));if(saved>=48&&saved<=96){size.value=String(saved);avatar.style.setProperty('--avatar-size',saved+'px')}}catch{}
- avatar.onclick=()=>{if(location.pathname!=='/chat')location.assign('/chat');else document.getElementById('prompt')?.focus()};
+
+ // JUUNIBI-style movable avatar: position is normalized and survives viewport changes.
+ const POSITION_KEY='amayune.avatar.position.v1';const edge=12;
+ let position={x:1,y:1};try{const stored=JSON.parse(localStorage.getItem(POSITION_KEY)||'null');if(stored&&Number.isFinite(stored.x)&&Number.isFinite(stored.y))position={x:Math.min(1,Math.max(0,stored.x)),y:Math.min(1,Math.max(0,stored.y))}}catch{}
+ const range=()=>({w:Math.max(0,innerWidth-avatar.offsetWidth-2*edge),h:Math.max(0,innerHeight-avatar.offsetHeight-2*edge)});
+ const place=()=>{const a=range();mount.style.left=(edge+position.x*a.w)+'px';mount.style.top=(edge+position.y*a.h)+'px'};
+ const moveTo=(left,top)=>{const a=range();position={x:a.w?Math.min(1,Math.max(0,(left-edge)/a.w)):0,y:a.h?Math.min(1,Math.max(0,(top-edge)/a.h)):0};place()};
+ const remember=()=>{try{localStorage.setItem(POSITION_KEY,JSON.stringify(position))}catch{}};
+ const togglePanel=()=>{panel.hidden=!panel.hidden;if(!panel.hidden)close.focus()};
+ let suppressClick=false;
+ avatar.addEventListener('pointerdown',e=>{if(e.button!==0)return;const rect=avatar.getBoundingClientRect();const dx=e.clientX-rect.left,dy=e.clientY-rect.top,sx=e.clientX,sy=e.clientY;let dragged=false;const pointer=e.pointerId;avatar.setPointerCapture(pointer);const onMove=m=>{if(!dragged&&Math.hypot(m.clientX-sx,m.clientY-sy)<6)return;dragged=true;avatar.classList.add('dragging');moveTo(m.clientX-dx,m.clientY-dy)};const onEnd=()=>{avatar.removeEventListener('pointermove',onMove);avatar.removeEventListener('pointerup',onEnd);avatar.removeEventListener('pointercancel',onEnd);avatar.classList.remove('dragging');if(dragged){suppressClick=true;remember();setTimeout(()=>{suppressClick=false},0)}};avatar.addEventListener('pointermove',onMove);avatar.addEventListener('pointerup',onEnd);avatar.addEventListener('pointercancel',onEnd)});
+ avatar.addEventListener('keydown',e=>{const shift=e.shiftKey?80:20;const delta={ArrowLeft:[-shift,0],ArrowRight:[shift,0],ArrowUp:[0,-shift],ArrowDown:[0,shift]}[e.key];if(!delta)return;e.preventDefault();const rect=avatar.getBoundingClientRect();moveTo(rect.left+delta[0],rect.top+delta[1]);remember()});
+ avatar.addEventListener('resize',place);window.addEventListener('resize',place);
+ place();
+ avatar.onclick=()=>{if(suppressClick)return;if(location.pathname!=='/chat')location.assign('/chat');else document.getElementById('prompt')?.focus()};
  avatar.oncontextmenu=e=>{e.preventDefault();panel.hidden=!panel.hidden;if(!panel.hidden)close.focus()};
  document.addEventListener('pointerdown',e=>{if(!mount.contains(e.target))panel.hidden=true});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!panel.hidden){panel.hidden=true;avatar.focus()}});
