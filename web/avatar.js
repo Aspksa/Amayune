@@ -30,6 +30,11 @@
  avatar.addEventListener('pointerdown',e=>{if(e.button!==0)return;const rect=avatar.getBoundingClientRect();const dx=e.clientX-rect.left,dy=e.clientY-rect.top,sx=e.clientX,sy=e.clientY;let dragged=false;const pointer=e.pointerId;avatar.setPointerCapture(pointer);const onMove=m=>{if(!dragged&&Math.hypot(m.clientX-sx,m.clientY-sy)<6)return;dragged=true;avatar.classList.add('dragging');moveTo(m.clientX-dx,m.clientY-dy)};const onEnd=()=>{avatar.removeEventListener('pointermove',onMove);avatar.removeEventListener('pointerup',onEnd);avatar.removeEventListener('pointercancel',onEnd);avatar.classList.remove('dragging');if(dragged){suppressClick=true;remember();setTimeout(()=>{suppressClick=false},0)}};avatar.addEventListener('pointermove',onMove);avatar.addEventListener('pointerup',onEnd);avatar.addEventListener('pointercancel',onEnd)});
  avatar.addEventListener('keydown',e=>{const shift=e.shiftKey?80:20;const delta={ArrowLeft:[-shift,0],ArrowRight:[shift,0],ArrowUp:[0,-shift],ArrowDown:[0,shift]}[e.key];if(!delta)return;e.preventDefault();const rect=avatar.getBoundingClientRect();moveTo(rect.left+delta[0],rect.top+delta[1]);remember()});
  avatar.addEventListener('resize',place);window.addEventListener('resize',place);
+ const status=document.createElement('span');status.className='amayune-avatar-status';status.setAttribute('aria-hidden','true');mount.append(status);
+ const states={idle:'Готова к общению',thinking:'Формирует ответ',speaking:'Озвучивает ответ',error:'Ошибка соединения'};
+ window.amayuneAvatarState=(next)=>{if(!Object.hasOwn(states,next))return;avatar.dataset.state=next;avatar.title='Amayune — '+states[next]+'; правая кнопка — настройки';status.dataset.state=next;status.title=states[next]};
+ window.amayuneAvatarState('idle');
+ window.addEventListener('message',event=>{if(event.origin!==location.origin||!event.data||event.data.type!=='amayune:avatar-state')return;window.amayuneAvatarState(event.data.state)});
  place();
  avatar.onclick=()=>{if(suppressClick)return;if(location.pathname!=='/chat'){if(window.amayuneToggleFloatingChat)window.amayuneToggleFloatingChat();else location.assign('/chat')}else document.getElementById('prompt')?.focus()};
  avatar.oncontextmenu=e=>{e.preventDefault();panel.hidden=!panel.hidden;if(!panel.hidden)close.focus()};
