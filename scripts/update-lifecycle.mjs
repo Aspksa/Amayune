@@ -14,6 +14,8 @@ export function requestInstallation(root,sha,publicKey){
  if(!/^[a-f0-9]{40}$/i.test(sha))throw Error('Invalid commit');
  if(existsSync(pending(root)))throw Error('Update already pending');
  const stage=join(directory(root),'staged');
+ const source=JSON.parse(readFileSync(join(stage,'source.json'),'utf8'));
+ if(source.sha!==sha)throw Error('Staged update does not match requested commit');
  const manifest=JSON.parse(readFileSync(join(stage,'manifest.json'),'utf8'));
  const files=validateSignedManifest(manifest,publicKey);
  inspectStagedFiles(stage,files);
