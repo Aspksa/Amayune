@@ -35,7 +35,7 @@ function render(){const scheme=settings.theme==='system'?(matchMedia('(prefers-c
 }
 function notify(s){document.getElementById('status').textContent=s;}
 function cloudMessage(s){document.getElementById('cloudStatus').textContent=s;const badge=document.getElementById('cloudConnectionBadge');if(badge)badge.textContent=s.startsWith('Соединение подтверждено')||s.startsWith('Ключ проверен')?'Подключено':s.startsWith('Проверяю')?'Проверка…':s.startsWith('Ключ сохранён')?'Ключ сохранён':s.startsWith('Проверка не пройдена')||s.startsWith('Авторизация')?'Ошибка проверки':'Не подключено';}
-function save(){try{localStorage.setItem('amayune.appearance.v1',JSON.stringify(settings));notify('Сохранено');}catch{notify('Не удалось сохранить локально');}}
+function save(){notify('Сохранение…');try{localStorage.setItem('amayune.appearance.v1',JSON.stringify(settings));notify('Сохранено');}catch{notify('Ошибка сохранения оформления');}}
 document.querySelectorAll('[data-setting]').forEach(el=>el.addEventListener('input',()=>{settings=clean({...settings,[el.dataset.setting]:el.type==='checkbox'?el.checked:el.value});render();save();}));
 document.querySelectorAll('[data-theme-tile]').forEach(tile=>tile.addEventListener('click',()=>{settings=clean({...settings,theme:tile.dataset.themeTile});render();save();}));
 matchMedia('(prefers-color-scheme: light)').addEventListener('change',()=>{if(settings.theme==='system')render();});
@@ -48,7 +48,18 @@ let cloud=null,models=[];
 function cloudFields(){document.querySelectorAll('[data-cloud]').forEach(el=>{el.value=el.type==='checkbox'?'':String(cloud[el.dataset.cloud]??'');if(el.type==='checkbox')el.checked=!!cloud[el.dataset.cloud];});}
 async function loadCloud(){try{const data=await request('settings');cloud=data.settings;cloudFields();cloudMessage(data.hasKey?'Ключ сохранён. Проверка не выполнялась.':'Ключ не сохранён');}catch(e){cloudMessage(e.message);}}
 let pending=Promise.resolve();
-document.querySelectorAll('[data-cloud]').forEach(el=>el.addEventListener('change',()=>{if(!cloud)return;const k=el.dataset.cloud;cloud[k]=el.type==='checkbox'?el.checked:el.type==='number'?Number(el.value):el.value;pending=pending.catch(()=>{}).then(async()=>{try{const x=await request('settings','PUT',cloud);cloud=x.settings;notify('Параметры модели сохранены');}catch(e){notify('Не сохранено: '+e.message);}});}));
+document.querySelectorAll('[data-cloud]').forEach(el=>el.addEventListener('change',()=>{
+ if(!cloud)return;
+ const k=el.dataset.cloud;
+ const v=el.type==='checkbox'?el.checked:el.type==='number'?Number(el.value):el.value;
+ cloud={...cloud,[k]:v};
+ notify('Сохранение Cloud.ru…');
+ pending=pending.catch(()=>{}).then(async()=>{
+  const snapshot={...cloud};
+  try{const x=await request('settings','PUT',snapshot);notify('Параметры Cloud.ru сохранены');}
+  catch{try{const data=await request('settings');cloud=data.settings;cloudFields();}catch{}notify('Ошибка сохранения Cloud.ru: проверьте параметры');}
+ });
+}));
 document.getElementById('showKey').onchange=e=>document.getElementById('apiKey').type=e.target.checked?'text':'password';
 document.getElementById('saveKey').onclick=async()=>{const el=document.getElementById('apiKey');try{await request('key','PUT',{key:el.value});el.value='';el.type='password';document.getElementById('showKey').checked=false;cloudMessage('Ключ проверен Cloud.ru и безопасно сохранён');}catch(e){el.value='';cloudMessage(e.message);}};
 document.getElementById('deleteKey').onclick=async()=>{if(!confirm('Удалить сохранённый ключ Cloud.ru?'))return;try{await request('key','DELETE');cloudMessage('Ключ удалён');}catch(e){notify(e.message);}};
@@ -59,20 +70,19 @@ document.getElementById('settingsNav').onclick=()=>{const sub=document.getElemen
 const searchInput=document.getElementById('search');
 function searchSettings(q){
  const term=q.trim().toLocaleLowerCase('ru');
- const pages=['appearance','connection'];
- let first=null,matchingPage=null;
- for(const pageId of pages){
-  const section=document.getElementById(pageId);
-  let count=0;
+ const sections=['appearance','connection'];
+ let target=null,first=null;
+ for(const id of sections){
+  const section=document.getElementById(id);
   for(const d of section.querySelectorAll('details')){
    const matches=!term||d.textContent.toLocaleLowerCase('ru').includes(term);
    d.hidden=!matches;
-   if(matches){count++;if(term){d.open=true;first??=d;}}
+   if(matches&&term){d.open=true;if(!target){target=id;first=d;}}
   }
-  if(term&&count&&!matchingPage)matchingPage=pageId;
  }
- if(term&&matchingPage){page(matchingPage);first?.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}
- if(term&&!matchingPage)notify('Совпадений не найдено');
+ if(term&&target){page(target);first?.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}
+ if(term&&!target)notify('Совпадений не найдено');
+ if(!term)notify('Готово');
 }
 searchInput.addEventListener('input',e=>searchSettings(e.target.value));
 document.addEventListener('keydown',e=>{
