@@ -19,3 +19,5 @@ test('reduced motion and responsive layout are present',()=>{
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.match(css,/@media\(max-width:820px\)/);
 });
+
+test('final polish offers skip navigation and search feedback',()=>{assert.match(html,/class="skip-link"/);assert.match(html,/id="mainContent"/);assert.match(html,/id="searchEmpty"/);assert.match(js,/searchEmpty/);assert.match(css,/\.skip-link:focus/);assert.match(css,/#status\[data-state=error\]/);});
