@@ -47,6 +47,13 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==='PUT'&&url.pathname==='/api/knowledge/verify'){const {id,verified}=await body(req);const result=(await memory()).verifyKnowledge(id,verified);if(verified)void autoIndex.schedule();return reply(res,200,{knowledge:result});}
   if(req.method==='DELETE'&&url.pathname==='/api/knowledge'){const {id}=await body(req);return reply(res,200,(await memory()).removeKnowledge(id));}
   if(req.method==='POST'&&url.pathname==='/api/knowledge/search'){const {query}=await body(req);return reply(res,200,{matches:(await memory()).recall(query)});}
+  if(req.method==='GET'&&url.pathname==='/api/chats/all')return reply(res,200,{chats:(await memory()).listAll()});
+  if(req.method==='GET'&&url.pathname==='/api/chats/search')return reply(res,200,{matches:(await memory()).searchChats(url.searchParams.get('q')||'')});
+  if(req.method==='GET'&&url.pathname==='/api/chats/messages'){const id=url.searchParams.get('id');const cursor=url.searchParams.get('before');let before=null;if(cursor){try{before=JSON.parse(cursor)}catch{return reply(res,400,{error:'Некорректный курсор'})}if(!Number.isSafeInteger(before?.created)||typeof before.id!=='string')return reply(res,400,{error:'Некорректный курсор'})}return reply(res,200,{messages:(await memory()).history(id,before,url.searchParams.get('limit'))});}
+  if(req.method==='POST'&&url.pathname==='/api/chats/upsert')return reply(res,200,(await memory()).upsertChat(await body(req)));
+  if(req.method==='POST'&&url.pathname==='/api/chats/message'){const {chatId,message}=await body(req,120000);return reply(res,200,(await memory()).appendMessage(chatId,message));}
+  if(req.method==='POST'&&url.pathname==='/api/chats/import')return reply(res,200,(await memory()).importLegacy((await body(req,10000000)).chats));
+  if(req.method==='DELETE'&&url.pathname==='/api/chats/item')return reply(res,200,(await memory()).deleteChat((await body(req)).id));
   if(req.method==='GET'&&url.pathname==='/api/chats')return reply(res,200,{chats:(await memory()).list()});
   if(req.method==='PUT'&&url.pathname==='/api/chats'){const {chats}=await body(req,2_000_000);(await memory()).save(chats);return reply(res,200,{saved:true});}
   if(req.method==='GET'&&url.pathname==='/api/update/history')return reply(res,200,{history:await updateHistory(root)});
