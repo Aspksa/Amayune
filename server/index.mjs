@@ -1,5 +1,6 @@
 import http from 'node:http';
 import {generate,getUsage} from './inference.mjs';
+import {checkGitHubUpdate} from './github-updates.mjs';
 import {getBackupPolicy,saveBackupPolicy,tickBackup} from './backup-policy.mjs';
 import {listBackups,makeBackup,recoverBackup} from './backups.mjs';
 import {createBackup,restoreBackup,diagnostics} from './maintenance.mjs';
@@ -31,6 +32,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==='GET'&&url.pathname==='/style.css'){res.writeHead(200,{'content-type':'text/css; charset=utf-8'});return res.end(readFileSync(join(root,'web','style.css')));}
   if(!url.pathname.startsWith('/api/'))return reply(res,404,{error:'Не найдено'});
   if(!auth(req))return reply(res,403,{error:'Доступ запрещён'});
+  if(req.method==='GET'&&url.pathname==='/api/update/check')return reply(res,200,{update:await checkGitHubUpdate(root)});
   if(req.method==='GET'&&url.pathname==='/api/usage')return reply(res,200,{usage:getUsage(root),budgetTokens:loadSettings(root).budgetTokens});
   if(req.method==='POST'&&url.pathname==='/api/generate'){
    const key=readKey(root);if(!key)return reply(res,409,{error:'Ключ Cloud.ru не сохранён'});

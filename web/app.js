@@ -82,14 +82,14 @@ document.getElementById('verifySelection').onclick=async()=>{
   output.textContent=missing.length?'Не найдены в каталоге: '+missing.map(([label,id])=>label+' ('+id+')').join(', '):chosen.length?'Все выбранные модели доступны в каталоге':'Каталог доступен, модели пока не выбраны';
  }catch(e){output.textContent='Не удалось проверить каталог: '+e.message;}
 };
-function page(name){for(const id of ['appearance','interface','connection','security','performance','notifications','maintenance','about'])document.getElementById(id).hidden=id!==name;document.querySelectorAll('[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===name));try{sessionStorage.setItem('amayune.page',name);}catch{}document.getElementById('settingsSubnav').hidden=false;document.getElementById('settingsNav').setAttribute('aria-expanded','true');}
+function page(name){for(const id of ['appearance','interface','connection','security','performance','notifications','maintenance','updates','about'])document.getElementById(id).hidden=id!==name;document.querySelectorAll('[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===name));try{sessionStorage.setItem('amayune.page',name);}catch{}document.getElementById('settingsSubnav').hidden=false;document.getElementById('settingsNav').setAttribute('aria-expanded','true');}
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>page(b.dataset.page));
 document.getElementById('settingsNav').onclick=()=>{const sub=document.getElementById('settingsSubnav');sub.hidden=!sub.hidden;document.getElementById('settingsNav').setAttribute('aria-expanded',String(!sub.hidden));};
 const searchInput=document.getElementById('search');
 searchInput.setAttribute('aria-label','Поиск настроек');
 function searchSettings(q){
  const term=q.trim().toLocaleLowerCase('ru');
- const sections=['appearance','interface','connection','security','performance','notifications','maintenance','about'];
+ const sections=['appearance','interface','connection','security','performance','notifications','maintenance','updates','about'];
  let target=null,first=null;
  for(const id of sections){
   const section=document.getElementById(id);
@@ -122,7 +122,7 @@ for(const [name,color] of accents){const b=document.createElement('button');b.ty
 const originalRender=render;
 render=function(){originalRender();for(const b of palette.children){b.setAttribute('aria-pressed',String(settings.accent===rgbToHex(b.style.backgroundColor)));}};
 function rgbToHex(rgb){const m=rgb.match(/\d+/g);return m&&m.length>=3?'#'+m.slice(0,3).map(v=>Number(v).toString(16).padStart(2,'0')).join('').toUpperCase():rgb.toUpperCase();}
-let initialPage='appearance';try{const saved=sessionStorage.getItem('amayune.page');if(['appearance','interface','connection','security','performance','notifications','maintenance','about'].includes(saved))initialPage=saved;}catch{}page(initialPage);render();loadCloud();
+let initialPage='appearance';try{const saved=sessionStorage.getItem('amayune.page');if(['appearance','interface','connection','security','performance','notifications','maintenance','updates','about'].includes(saved))initialPage=saved;}catch{}page(initialPage);render();loadCloud();
 
 let diagnosticReport=null;
 document.getElementById('diagnose').onclick=async()=>{
@@ -194,3 +194,13 @@ document.getElementById('generationSend').onclick=async()=>{
  finally{btn.disabled=false;}
 };
 refreshCloudUsage();
+
+// Update Center: read-only until signed release delivery is configured.
+document.getElementById('checkUpdates').addEventListener('click',async()=>{
+ const el=document.getElementById('updateStatus');const button=document.getElementById('checkUpdates');
+ button.disabled=true;el.textContent='Проверяю GitHub и результаты CI…';
+ try{const {update:u}=await request('update/check');
+ const state={success:'проверки пройдены',pending:'проверки выполняются',failure:'проверки не пройдены',none:'проверок нет'}[u.ci]||'неизвестно';
+ el.textContent='GitHub: '+u.sha.slice(0,12)+' · CI: '+state+' · '+(u.installed?'Установлена: '+u.installed.slice(0,12):'Установленная версия не определена')+' · '+(u.updateAvailable?'Есть изменения':'Актуальная версия')+'. Для установки требуется подписанный пакет.';
+ }catch(e){el.textContent='Ошибка проверки обновлений: '+e.message;}finally{button.disabled=false;}
+});
