@@ -31,7 +31,7 @@
  avatar.addEventListener('keydown',e=>{const shift=e.shiftKey?80:20;const delta={ArrowLeft:[-shift,0],ArrowRight:[shift,0],ArrowUp:[0,-shift],ArrowDown:[0,shift]}[e.key];if(!delta)return;e.preventDefault();const rect=avatar.getBoundingClientRect();moveTo(rect.left+delta[0],rect.top+delta[1]);remember()});
  avatar.addEventListener('resize',place);window.addEventListener('resize',place);
  place();
- avatar.onclick=()=>{if(suppressClick)return;if(location.pathname!=='/chat')location.assign('/chat');else document.getElementById('prompt')?.focus()};
+ avatar.onclick=()=>{if(suppressClick)return;if(location.pathname!=='/chat'){if(window.amayuneToggleFloatingChat)window.amayuneToggleFloatingChat();else location.assign('/chat')}else document.getElementById('prompt')?.focus()};
  avatar.oncontextmenu=e=>{e.preventDefault();panel.hidden=!panel.hidden;if(!panel.hidden)close.focus()};
  document.addEventListener('pointerdown',e=>{if(!mount.contains(e.target))panel.hidden=true});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!panel.hidden){panel.hidden=true;avatar.focus()}});
