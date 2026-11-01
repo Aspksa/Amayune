@@ -1,7 +1,7 @@
-import {existsSync,readFileSync,writeFileSync,mkdirSync,copyFileSync,rmSync,renameSync} from 'node:fs';
-import {join,dirname} from 'node:path';
+import {existsSync,readFileSync,writeFileSync,mkdirSync,copyFileSync,rmSync} from 'node:fs';
+import {join} from 'node:path';
 import {applyUpdate} from './update.mjs';
-import {validateSignedManifest} from './update-validation.mjs';
+import {validateSignedManifest,inspectStagedFiles} from './update-validation.mjs';
 const directory=root=>join(root,'.runtime','updates');
 const pending=root=>join(directory(root),'pending.json');
 export function updateStatus(root){
@@ -15,7 +15,8 @@ export function requestInstallation(root,sha,publicKey){
  if(existsSync(pending(root)))throw Error('Update already pending');
  const stage=join(directory(root),'staged');
  const manifest=JSON.parse(readFileSync(join(stage,'manifest.json'),'utf8'));
- validateSignedManifest(manifest,publicKey);
+ const files=validateSignedManifest(manifest,publicKey);
+ inspectStagedFiles(stage,files);
  mkdirSync(directory(root),{recursive:true});
  writeFileSync(pending(root),JSON.stringify({state:'ready',sha,at:new Date().toISOString()}),{flag:'wx'});
  return {state:'ready',sha};
@@ -39,7 +40,8 @@ export function finishPendingUpdate(root,healthy){
  if(p.state!=='booting')return false;
  if(!healthy){
   const manifest=JSON.parse(readFileSync(join(p.backup,'manifest.json'),'utf8'));
-  for(const entry of manifest.files){
+  const files=validateSignedManifest(manifest,process.env.AMAYUNE_UPDATE_PUBLIC_KEY);
+  for(const entry of files){
    const original=join(p.backup,entry.path),destination=join(root,entry.path);
    if(existsSync(original))copyFileSync(original,destination);
    else rmSync(destination,{force:true});
