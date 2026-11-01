@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,rmSync,mkdirSync,writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {streamGenerate} from '../server/inference.mjs';
+const root=mkdtempSync(join(tmpdir(),'amayune-cloud-audit-'));
+mkdirSync(join(root,'data'));writeFileSync(join(root,'data','cloudru-settings.json'),JSON.stringify({primaryModel:'test-model'}));
+const fake=events=>async()=>({ok:true,body:new ReadableStream({start(c){for(const e of events)c.enqueue(new TextEncoder().encode(e));c.close()}})});
+test('valid Cloud.ru SSE chunks and finish reason',async()=>{let text='';await streamGenerate(root,'test','hello',s=>{text+=s},fake(['data: {"choices":[{"delta":{"content":"Привет"},"finish_reason":"stop"}]}\n\n']));assert.equal(text,'Привет')});
+test('truncated SSE must not be reported as a successful answer',async()=>{let text='';await assert.rejects(streamGenerate(root,'test','hello',s=>{text+=s},fake(['data: {"choices":[{"delta":{"content":"часть"}}]}\n\n'])),/соединение прервано/);assert.equal(text,'часть')});
+test('upstream SSE error is not silently ignored',async()=>{await assert.rejects(streamGenerate(root,'test','hello',()=>{},fake(['data: {"error":{"message":"provider failure"}}\n\n'])),/provider failure/)});
+test('browser recognizes server stream error markers',()=>{const pattern=/\n?\[Ошибка потока: ([^\]]+)\]\s*$/;assert.equal('текст\n[Ошибка потока: Cloud.ru HTTP 404]'.match(pattern)?.[1],'Cloud.ru HTTP 404')});
+test.after(()=>rmSync(root,{recursive:true,force:true}));
