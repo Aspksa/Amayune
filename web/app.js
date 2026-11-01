@@ -82,8 +82,8 @@ document.getElementById('verifySelection').onclick=async()=>{
   output.textContent=missing.length?'Не найдены в каталоге: '+missing.map(([label,id])=>label+' ('+id+')').join(', '):chosen.length?'Все выбранные модели доступны в каталоге':'Каталог доступен, модели пока не выбраны';
  }catch(e){output.textContent='Не удалось проверить каталог: '+e.message;}
 };
-function page(name){for(const id of ['appearance','interface','connection','security','performance','notifications','maintenance','updates','about'])document.getElementById(id).hidden=id!==name;document.querySelectorAll('[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===name));try{sessionStorage.setItem('amayune.page',name);}catch{}document.getElementById('settingsSubnav').hidden=false;document.getElementById('settingsNav').setAttribute('aria-expanded','true');}
-document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>page(b.dataset.page));
+function page(name){for(const id of ['appearance','interface','connection','security','performance','notifications','maintenance','updates','about'])document.getElementById(id).hidden=id!==name;document.querySelectorAll('[data-page]').forEach(n=>{const active=n.dataset.page===name;n.classList.toggle('active',active);if(active)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current');});try{sessionStorage.setItem('amayune.page',name);}catch{}document.getElementById('settingsSubnav').hidden=false;document.getElementById('settingsNav').setAttribute('aria-expanded','true');}
+document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{page(b.dataset.page);if(window.matchMedia('(max-width:820px)').matches)b.scrollIntoView({block:'nearest',inline:'center',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});});
 document.getElementById('settingsNav').onclick=()=>{const sub=document.getElementById('settingsSubnav');sub.hidden=!sub.hidden;document.getElementById('settingsNav').setAttribute('aria-expanded',String(!sub.hidden));};
 const searchInput=document.getElementById('search');
 searchInput.setAttribute('aria-label','Поиск настроек');
