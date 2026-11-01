@@ -1,5 +1,5 @@
 import http from 'node:http';
-import {generate,getUsage} from './inference.mjs';
+import {generate,getUsage,streamGenerate} from './inference.mjs';
 import {checkGitHubUpdate,updateHistory,updateChanges} from './github-updates.mjs';
 import {stageSignedRelease} from '../scripts/stage-release.mjs';
 import {requestInstallation,updateStatus} from '../scripts/update-lifecycle.mjs';
@@ -52,6 +52,14 @@ const server=http.createServer(async(req,res)=>{
    if(update.sha!==sha||update.ci!=='success')return reply(res,409,{error:'Версия GitHub изменилась или CI не пройден'});
    if(!process.env.AMAYUNE_UPDATE_PUBLIC_KEY)return reply(res,409,{error:'Ключ проверки подписи обновлений не настроен'});
    return reply(res,200,{staged:await stageSignedRelease({root,sha,manifest,publicKey:process.env.AMAYUNE_UPDATE_PUBLIC_KEY})});
+  }
+  if(req.method==='POST'&&url.pathname==='/api/chat/stream'){
+   const key=readKey(root);if(!key)return reply(res,409,{error:'Ключ Cloud.ru не сохранён'});
+   const {prompt}=await body(req,18000);
+   if(typeof prompt!=='string'||!prompt.trim()||prompt.length>16000)return reply(res,400,{error:'Некорректный запрос'});
+   res.writeHead(200,{'content-type':'text/plain; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});
+   try{await streamGenerate(root,key,prompt,chunk=>{if(!res.destroyed)res.write(chunk)});}catch(e){if(!res.destroyed)res.write('\n[Ошибка потока: '+(e.status?'Cloud.ru HTTP '+e.status:'соединение прервано')+']');}
+   if(!res.destroyed)res.end();return;
   }
   if(req.method==='GET'&&url.pathname==='/api/usage')return reply(res,200,{usage:getUsage(root),budgetTokens:loadSettings(root).budgetTokens});
   if(req.method==='POST'&&url.pathname==='/api/generate'){
