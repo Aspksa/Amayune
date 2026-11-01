@@ -56,6 +56,7 @@ async function launch(){
     throw Error('Параллельный запуск занят. Повторите позже.');
   }
   let installing=false;
+  let child;
   try{
     const update=updateStatus(root);
     if(update.state==='invalid')throw Error('Повреждён статус обновления; требуется ручная проверка');
@@ -75,7 +76,7 @@ async function launch(){
     const instanceId=randomBytes(24).toString('hex');
     const env={...process.env,AMAYUNE_INSTANCE_ID:instanceId,PORT:String(port),HOST:'127.0.0.1',AMAYUNE_DATA_DIR:join(root,'data')};
     const command=process.platform==='win32'?'npm.cmd':'npm';
-    const child=spawn(command,['run',config.start.script],{cwd:root,env,detached:true,stdio:'ignore',shell:process.platform==='win32',windowsHide:true});
+    child=spawn(command,['run',config.start.script],{cwd:root,env,detached:true,stdio:'ignore',shell:process.platform==='win32',windowsHide:true});
     child.unref();
     const url='http://127.0.0.1:'+port+healthPath;
     const ready=await waitHealth(url,config.health?.timeoutMs??30000);
@@ -93,6 +94,10 @@ async function launch(){
     log('ready','HTTP готов: '+url);
     browser('http://127.0.0.1:'+port);
   }catch(e){
+    if(installing&&child?.pid){
+      if(process.platform==='win32')spawnSync('taskkill',['/PID',String(child.pid),'/T','/F'],{windowsHide:true});
+      else{try{process.kill(-child.pid);}catch{}}
+    }
     if(installing&&updateStatus(root).state==='booting'){
       try{finishPendingUpdate(root,false);log('update','Откат выполнен');}
       catch(rollbackError){log('error','Ошибка отката: '+rollbackError.message,1);}
