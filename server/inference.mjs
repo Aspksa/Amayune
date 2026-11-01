@@ -19,7 +19,7 @@ export async function generate(root,key,prompt,fetcher=fetch){
   catch(e){last=Object.assign(Error(e?.name==='TimeoutError'?'Cloud.ru: тайм-аут':'Cloud.ru: ошибка соединения'),{status:503});continue;}
   if(!response.ok){
    const code=response.status;
-   last=Object.assign(Error(code===401||code===403?'Cloud.ru: ошибка авторизации':code===429?'Cloud.ru: ограничение запросов':'Cloud.ru: HTTP '+code),{status:code===401||code===403?401:code===429?429:502});
+   last=Object.assign(Error(code===401||code===403?'Cloud.ru: ошибка авторизации':code===429?'Cloud.ru: ограничение запросов':code===404?'Cloud.ru HTTP 404: модель не найдена или недоступна для этого ключа. Выберите модель из актуального каталога.':'Cloud.ru: HTTP '+code),{status:code===401||code===403?401:code===429?429:502});
    if([400,401,403,404,422].includes(code))break;
    continue;
   }
@@ -39,7 +39,7 @@ export async function streamGenerate(root,key,prompt,onChunk,fetcher=fetch){
  if(!cfg.primaryModel)throw Object.assign(Error('Выберите модель'),{status:409});
  if(cfg.budgetTokens===0||used.totalTokens>=cfg.budgetTokens)throw Object.assign(Error('Лимит токенов исчерпан'),{status:409});
  const response=await fetcher(endpoint,{method:'POST',headers:{authorization:'Bearer '+key,'content-type':'application/json'},body:JSON.stringify({model:cfg.primaryModel,messages:[{role:'user',content:prompt}],temperature:cfg.temperature,max_completion_tokens:Math.min(cfg.maxTokens,Math.max(1,cfg.budgetTokens-used.totalTokens)),stream:true,stream_options:{include_usage:true}}),signal:AbortSignal.timeout(cfg.timeoutMs)});
- if(!response.ok)throw Object.assign(Error('Cloud.ru: HTTP '+response.status),{status:502});
+ if(!response.ok)throw Object.assign(Error(response.status===404?'Cloud.ru HTTP 404: модель недоступна. Откройте настройки Cloud.ru и выберите модель из каталога.':'Cloud.ru: HTTP '+response.status),{status:response.status===404?404:502});
  if(!response.body)throw Object.assign(Error('Cloud.ru: поток недоступен'),{status:502});
  let pending='',usage=null;const reader=response.body.getReader(),decoder=new TextDecoder();
  try{while(true){const {done,value}=await reader.read();if(done)break;pending+=decoder.decode(value,{stream:true});if(pending.length>1000000)throw Error('Слишком длинный ответ');let pos;while((pos=pending.indexOf('\n'))>=0){const line=pending.slice(0,pos).trim();pending=pending.slice(pos+1);if(!line.startsWith('data:'))continue;const raw=line.slice(5).trim();if(raw==='[DONE]')continue;let item;try{item=JSON.parse(raw)}catch{continue}if(item.usage)usage=item.usage;const delta=item.choices?.[0]?.delta?.content;if(typeof delta==='string'&&delta)await onChunk(delta);}}}finally{reader.releaseLock()}
