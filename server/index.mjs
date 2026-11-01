@@ -1,6 +1,6 @@
 import http from 'node:http';
 import {generate,getUsage} from './inference.mjs';
-import {checkGitHubUpdate} from './github-updates.mjs';
+import {checkGitHubUpdate,updateHistory,updateChanges} from './github-updates.mjs';
 import {stageSignedRelease} from '../scripts/stage-release.mjs';
 import {requestInstallation,updateStatus} from '../scripts/update-lifecycle.mjs';
 import {getBackupPolicy,saveBackupPolicy,tickBackup} from './backup-policy.mjs';
@@ -34,6 +34,8 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==='GET'&&url.pathname==='/style.css'){res.writeHead(200,{'content-type':'text/css; charset=utf-8'});return res.end(readFileSync(join(root,'web','style.css')));}
   if(!url.pathname.startsWith('/api/'))return reply(res,404,{error:'Не найдено'});
   if(!auth(req))return reply(res,403,{error:'Доступ запрещён'});
+  if(req.method==='GET'&&url.pathname==='/api/update/history')return reply(res,200,{history:await updateHistory(root)});
+  if(req.method==='GET'&&url.pathname==='/api/update/changes')return reply(res,200,{changes:await updateChanges(url.searchParams.get('sha'))});
   if(req.method==='GET'&&url.pathname==='/api/update/check')return reply(res,200,{update:await checkGitHubUpdate(root),installation:updateStatus(root)});
   if(req.method==='POST'&&url.pathname==='/api/update/install'){
    const {sha}=await body(req);

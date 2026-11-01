@@ -32,3 +32,28 @@ export async function checkGitHubUpdate(root,fetcher=fetch){
  const installed=installedVersion(root);
  return {repository:'Aspksa/Amayune',sha,installed,updateAvailable:installed!==sha,ci,canInstall:ci==='success'&&Boolean(process.env.AMAYUNE_UPDATE_PUBLIC_KEY),signatureRequired:true,checkedAt:new Date().toISOString()};
 }
+
+export async function updateHistory(root,fetcher=fetch){
+ const result=await github('/commits?sha=main&per_page=15',fetcher);
+ if(!Array.isArray(result))throw Error('Invalid GitHub history');
+ return result.filter(item=>shaPattern.test(item.sha||'')).map(item=>({
+  sha:item.sha,
+  title:String(item.commit?.message||'').split('\n')[0].slice(0,180),
+  date:item.commit?.committer?.date||null,
+  url:'https://github.com/Aspksa/Amayune/commit/'+item.sha
+ }));
+}
+export async function updateChanges(sha,fetcher=fetch){
+ if(!shaPattern.test(sha))throw Error('Invalid commit SHA');
+ const item=await github('/commits/'+sha,fetcher);
+ return {
+  sha,
+  message:String(item.commit?.message||'').slice(0,6000),
+  files:(item.files||[]).slice(0,200).map(file=>({
+   path:String(file.filename||'').slice(0,260),
+   status:file.status,
+   additions:file.additions||0,
+   deletions:file.deletions||0
+  }))
+ };
+}
