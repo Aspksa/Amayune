@@ -1,0 +1,37 @@
+name: Windows launcher smoke
+on:
+  push:
+    branches: [main, feature/reliable-windows-launcher]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  launcher:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        shell: pwsh
+        run: |
+          Get-ChildItem scripts -Filter '*.mjs' | ForEach-Object { node --check $_.FullName; if ($LASTEXITCODE -ne 0) { throw "Syntax error: $_" } }
+      - name: Test health module
+        run: node --test scripts/health-check.test.mjs
+      - name: Test expected failure with missing app config
+        shell: pwsh
+        run: |
+          $output = cmd.exe /d /c 'echo.|Project.bat' 2>&1
+          $output | Out-Host
+          if ($LASTEXITCODE -eq 0) { throw 'Expected a nonzero exit when application is missing.' }
+      - name: Test Cyrillic and spaced working directory
+        shell: pwsh
+        run: |
+          $target = Join-Path $env:RUNNER_TEMP 'Тест проект с пробелами'
+          New-Item -ItemType Directory -Force -Path $target | Out-Null
+          Copy-Item Project.bat -Destination $target
+          Copy-Item Amayune.bat -Destination $target
+          Copy-Item scripts -Recurse -Destination $target
+          $output = cmd.exe /d /c ('echo.|"' + (Join-Path $target 'Project.bat') + '"') 2>&1
+          $output | Out-Host
+          if ($LASTEXITCODE -eq 0) { throw 'Expected missing config failure.' }
