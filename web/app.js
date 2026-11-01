@@ -162,3 +162,12 @@ document.getElementById('refreshAbout').onclick=async()=>{const el=document.getE
 const oldPage=page;
 page=function(name){oldPage(name);if(name==='interface'||name==='notifications'||name==='performance')syncPreferences();if(name==='security')refreshSecurity();if(name==='about')document.getElementById('refreshAbout').click();if(name==='performance'){document.getElementById('performanceValues').textContent=cloud?'Максимум токенов: '+cloud.maxTokens+' · Параллельных запросов: '+cloud.concurrency+' · Тайм-аут: '+cloud.timeoutMs+' мс':'Параметры Cloud.ru не загружены';}};
 syncPreferences();
+
+async function refreshBackups(){
+ const box=document.getElementById('backupItems');
+ try{const data=await request('backups');box.replaceChildren(...data.backups.map(item=>{const row=document.createElement('div');row.className='backup-row';const label=document.createElement('span');label.textContent=item.name+' · '+Math.ceil(item.size/1024)+' КБ';const button=document.createElement('button');button.type='button';button.textContent='Восстановить';button.onclick=async()=>{if(!confirm('Заменить настройки Cloud.ru этой резервной копией? API-ключ не изменится.'))return;try{const restored=await request('backups/restore','POST',{name:item.name});cloud=restored.restored.cloud;cloudFields();notify('Резервная копия восстановлена');}catch(e){notify('Ошибка восстановления: '+e.message);}};row.append(label,button);return row;}));if(!data.backups.length)box.textContent='Сохранённых копий ещё нет';}
+ catch(e){box.textContent='Ошибка списка копий: '+e.message;}
+}
+document.getElementById('backupRefresh').onclick=refreshBackups;
+document.getElementById('backupSnapshot').onclick=async()=>{try{await request('backups','POST',{});notify('Резервная копия создана');await refreshBackups();}catch(e){notify('Ошибка создания копии: '+e.message);}};
+refreshBackups();
