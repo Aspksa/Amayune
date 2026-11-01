@@ -1,7 +1,7 @@
 import {readFileSync,existsSync,mkdirSync,copyFileSync,rmSync,writeFileSync,lstatSync,realpathSync} from 'node:fs';
 import {join,dirname,resolve,relative} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {createHash} from 'node:crypto';
+import {createHash,verify,createPublicKey} from 'node:crypto';
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const blocked=new Set(['data','.runtime','logs','.env','node_modules','memory','documents','settings','config']);
 function valid(p){
@@ -9,6 +9,10 @@ function valid(p){
 }
 export function applyUpdate(manifestFile){
   const manifest=JSON.parse(readFileSync(manifestFile,'utf8'));
+  // A checksum is not an authenticity proof. Refuse unsigned updates.
+  if(manifest.signatureAlgorithm!=='ed25519'||typeof manifest.signature!=='string'||!process.env.AMAYUNE_UPDATE_PUBLIC_KEY)throw Error('Update rejected: signed manifest and trusted public key required');
+  const canonical=JSON.stringify({files:manifest.files});
+  if(!verify(null,Buffer.from(canonical),createPublicKey(process.env.AMAYUNE_UPDATE_PUBLIC_KEY),Buffer.from(manifest.signature,'base64')))throw Error('Invalid update signature');
   if(!Array.isArray(manifest.files)||manifest.files.length===0)throw Error('Empty update manifest');
   const stage=join(root,'.runtime','updates','staged');
   const seen=new Set();

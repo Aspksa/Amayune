@@ -26,7 +26,7 @@ export function atomicJson(file,data){
 }
 export function loadSettings(root){
  const file=join(root,'data','cloudru-settings.json');
- try{return validate(JSON.parse(readFileSync(file,'utf8')));}catch{return {...DEFAULTS};}
+ try{return validate(JSON.parse(readFileSync(file,'utf8')));}catch(e){if(e?.code==='ENOENT')return {...DEFAULTS};throw Object.assign(Error('Не удалось загрузить настройки Cloud.ru: '+e.message),{status:503});}
 }
 export function saveSettings(root,input){const settings=validate(input);atomicJson(join(root,'data','cloudru-settings.json'),settings);return settings;}
 const dpapi=String.raw`$ErrorActionPreference='Stop'

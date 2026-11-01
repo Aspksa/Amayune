@@ -10,7 +10,7 @@ export function validateBackupPolicy(value){
  return {enabled:value.enabled,intervalHours:value.intervalHours,retention:value.retention,lastRunAt:value.lastRunAt};
 }
 export function getBackupPolicy(root){
- try{return validateBackupPolicy(JSON.parse(readFileSync(join(root,'data','backup-policy.json'),'utf8')));}catch{return {...DEFAULT_BACKUP_POLICY};}
+ try{return validateBackupPolicy(JSON.parse(readFileSync(join(root,'data','backup-policy.json'),'utf8')));}catch(e){if(e?.code==='ENOENT')return {...DEFAULT_BACKUP_POLICY};throw Object.assign(Error('Повреждена политика резервирования: '+e.message),{status:503});}
 }
 export function saveBackupPolicy(root,input){
  const old=getBackupPolicy(root);
