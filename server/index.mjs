@@ -22,7 +22,7 @@ const server=http.createServer(async(req,res)=>{
  try{
   if(!safeHost(req)||!sameOrigin(req))return reply(res,403,{error:'Недопустимый источник запроса'});
   const url=new URL(req.url,'http://'+host+':'+port);
-  if(req.method==='GET'&&url.pathname==='/health')return reply(res,200,{status:'ok'});
+  if(req.method==='GET'&&url.pathname==='/health')return reply(res,200,{status:'ok',instanceId:process.env.AMAYUNE_INSTANCE_ID||null});
   if(req.method==='GET'&&(url.pathname==='/'||url.pathname==='/index.html')){
    const html=readFileSync(join(root,'web','index.html'),'utf8').replace('__CSRF_TOKEN__',token);
    res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"});return res.end(html);
