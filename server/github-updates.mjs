@@ -68,3 +68,22 @@ export async function updateChanges(sha,fetcher=fetch){
   }))
  };
 }
+
+/** Discover a release manifest automatically. Never accept unsigned GitHub source as an installable update. */
+export async function fetchReleaseManifest(sha,fetcher=fetch){
+ if(!shaPattern.test(sha||''))throw Object.assign(Error('Некорректная версия обновления'),{status:400});
+ const response=await fetcher(API+'/releases/tags/'+sha,{headers:HEADERS,signal:AbortSignal.timeout(timeout)});
+ if(response.status===404)throw Object.assign(Error('Для этой версии пока нет подписанного пакета обновления. Обновление через приложение недоступно; дождитесь опубликованного релиза.'),{status:409});
+ if(!response.ok)throw Object.assign(Error('Не удалось получить релиз: GitHub HTTP '+response.status),{status:502});
+ const release=await response.json();
+ const asset=release?.assets?.find(x=>x.name==='manifest.json'&&typeof x.browser_download_url==='string'&&x.browser_download_url.startsWith('https://github.com/Aspksa/Amayune/releases/download/'));
+ if(!asset)throw Object.assign(Error('В релизе нет подписанного manifest.json. Установка заблокирована.'),{status:409});
+ const file=await fetcher(asset.browser_download_url,{signal:AbortSignal.timeout(timeout)});
+ if(!file.ok)throw Object.assign(Error('Не удалось загрузить манифест: HTTP '+file.status),{status:502});
+ const length=Number(file.headers?.get?.('content-length')||0);
+ if(length>1_000_000)throw Object.assign(Error('Манифест слишком большой'),{status:502});
+ const text=await file.text();
+ if(text.length>1_000_000)throw Object.assign(Error('Манифест слишком большой'),{status:502});
+ let manifest;try{manifest=JSON.parse(text)}catch{throw Object.assign(Error('Манифест релиза повреждён'),{status:502})}
+ return manifest;
+}
