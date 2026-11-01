@@ -7,6 +7,7 @@ import {createGrowthStore,growthContext} from './soul-growth.mjs';
 import {createLivingSoulStore,livingContext,eventCandidates} from './living-soul.mjs';
 import {formatConversationHistory} from './conversation-context.mjs';
 import {createLivingMind,livingMindContext,planInitiative} from './living-mind.mjs';
+import {createUnifiedMindStore,collectMindTimeline} from './unified-mind.mjs';
 import {embedCloud} from './embeddings.mjs';
 import {createAutoIndexer} from './auto-index.mjs';
 import {generate,getUsage,streamGenerate} from './inference.mjs';
@@ -35,6 +36,8 @@ const growth=()=>growthInstance??=(createGrowthStore(root));
 let livingInstance;
 const living=()=>livingInstance??=(createLivingSoulStore(root));
 let mindInstance;const mind=()=>mindInstance??=(createLivingMind(root));
+let unifiedInstance;const unified=()=>unifiedInstance??=(createUnifiedMindStore(root));
+const mindSources=()=>({soul:soul(),evolution:evolution(),growth:growth(),living:living(),mind:mind()});
 const autoIndex=createAutoIndexer({memory,readKey});
 const scheduler=createScheduler();scheduler.enqueue('semantic-index',()=>autoIndex.schedule());
 const api='https://foundation-models.api.cloud.ru/v1/models';
@@ -98,6 +101,13 @@ const server=http.createServer(async(req,res)=>{
    if(!process.env.AMAYUNE_UPDATE_PUBLIC_KEY)return reply(res,409,{error:'Ключ проверки подписи обновлений не настроен'});
    return reply(res,200,{staged:await stageSignedRelease({root,sha,manifest,publicKey:process.env.AMAYUNE_UPDATE_PUBLIC_KEY})});
   }
+  if(req.method==='GET'&&url.pathname==='/api/mind/timeline')return reply(res,200,{timeline:collectMindTimeline(mindSources())});
+  if(req.method==='POST'&&url.pathname==='/api/mind/snapshot')return reply(res,201,{snapshot:unified().capture(mindSources())});
+  if(req.method==='GET'&&url.pathname==='/api/mind/snapshot')return reply(res,200,{snapshot:unified().latest()});
+  if(req.method==='GET'&&url.pathname==='/api/mind/evolution')return reply(res,200,{profile:evolution().profile(),history:evolution().history(),pending:growth().pending()});
+  if(req.method==='POST'&&url.pathname==='/api/mind/evolution/propose'){const {feedback}=await body(req);if(typeof feedback!=='string'||!feedback.trim()||feedback.length>1000)return reply(res,400,{error:'Некорректный отзыв'});return reply(res,201,{proposal:growth().propose(feedback)});}
+  if(req.method==='POST'&&url.pathname==='/api/mind/evolution/approve'){const {id}=await body(req);if(typeof id!=='string'||!id)return reply(res,400,{error:'Некорректный идентификатор'});const delta=growth().approve(id);const result=evolution().evolve(delta,'approved feedback '+id);unified().audit('evolve',id);return reply(res,200,{result});}
+  if(req.method==='POST'&&url.pathname==='/api/mind/evolution/rollback'){const {id}=await body(req);if(typeof id!=='string'||!id)return reply(res,400,{error:'Некорректный идентификатор'});const version=evolution().rollback(id);unified().audit('rollback',id);return reply(res,200,{version});}
   if(req.method==='GET'&&url.pathname==='/api/mind')return reply(res,200,{state:mind().state(),initiativeEnabled:mind().initiativeEnabled(),events:mind().events()});
   if(req.method==='PUT'&&url.pathname==='/api/mind/initiative'){const {enabled}=await body(req);if(typeof enabled!=='boolean')return reply(res,400,{error:'Некорректный запрос'});return reply(res,200,{enabled:mind().setInitiative(enabled)});}
   if(req.method==='POST'&&url.pathname==='/api/mind/reset')return reply(res,200,{state:mind().reset()});
