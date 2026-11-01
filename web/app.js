@@ -63,7 +63,25 @@ document.querySelectorAll('[data-cloud]').forEach(el=>el.addEventListener('chang
 document.getElementById('showKey').onchange=e=>document.getElementById('apiKey').type=e.target.checked?'text':'password';
 document.getElementById('saveKey').onclick=async()=>{const el=document.getElementById('apiKey');try{await request('key','PUT',{key:el.value});el.value='';el.type='password';document.getElementById('showKey').checked=false;cloudMessage('Ключ проверен Cloud.ru и безопасно сохранён');}catch(e){el.value='';cloudMessage(e.message);}};
 document.getElementById('deleteKey').onclick=async()=>{if(!confirm('Удалить сохранённый ключ Cloud.ru?'))return;try{await request('key','DELETE');cloudMessage('Ключ удалён');}catch(e){notify(e.message);}};
-document.getElementById('checkAll').onclick=async()=>{const box=document.getElementById('cloudStatus');cloudMessage('Проверяю доступ к списку моделей...');try{const data=await request('models');models=data.models;document.getElementById('models').replaceChildren(...models.map(m=>{const o=document.createElement('option');o.value=m.id;return o;}));const info=document.getElementById('modelInfo');info.replaceChildren(...models.slice(0,100).map(m=>{const p=document.createElement('p');p.textContent=[m.name,'ID: '+m.id,m.context===null?'':'Контекст: '+m.context,m.inputCost===null?'':'Вход: '+m.inputCost,m.outputCost===null?'':'Выход: '+m.outputCost].filter(Boolean).join(' · ');return p;}));cloudMessage('Соединение подтверждено · моделей: '+models.length+' · '+new Date(data.checkedAt).toLocaleString('ru-RU'));}catch(e){cloudMessage('Проверка не пройдена: '+e.message);}};
+document.getElementById('checkAll').onclick=async()=>{const box=document.getElementById('cloudStatus');cloudMessage('Проверяю доступ к списку моделей...');try{const data=await request('models');models=data.models;document.getElementById('models').replaceChildren(...models.map(m=>{const o=document.createElement('option');o.value=m.id;return o;}));const info=document.getElementById('modelInfo');info.replaceChildren(...models.slice(0,100).map(m=>{const p=document.createElement('p');p.textContent=[m.name,'ID: '+m.id,m.context===null?'':'Контекст: '+m.context,m.inputCost===null?'':'Вход: '+m.inputCost,m.outputCost===null?'':'Выход: '+m.outputCost].filter(Boolean).join(' · ');return p;}));cloudMessage('Соединение подтверждено · моделей: '+models.length+' · '+new Date(data.checkedAt).toLocaleString('ru-RU'));renderModelCatalogue();}catch(e){cloudMessage('Проверка не пройдена: '+e.message);}};
+function renderModelCatalogue(){
+ const q=document.getElementById('modelSearch').value.trim().toLocaleLowerCase('ru');
+ const found=models.filter(m=>m.id.toLocaleLowerCase('ru').includes(q)||m.name.toLocaleLowerCase('ru').includes(q)).slice(0,100);
+ const info=document.getElementById('modelInfo');
+ info.replaceChildren(...found.map(m=>{const item=document.createElement('div');item.className='model-card';const label=document.createElement('strong');label.textContent=m.name;const meta=document.createElement('small');meta.textContent=m.id+(m.context===null?'':' · Контекст '+m.context);item.append(label,meta);return item;}));
+ document.getElementById('selectionStatus').textContent=models.length?'Показано '+found.length+' из '+models.length+' моделей':'Каталог не загружен: нажмите «Проверить всё»';
+}
+document.getElementById('modelSearch').addEventListener('input',renderModelCatalogue);
+document.getElementById('verifySelection').onclick=async()=>{
+ const output=document.getElementById('selectionStatus');
+ output.textContent='Проверяю актуальный каталог Cloud.ru…';
+ try{
+  const data=await request('models');models=data.models;renderModelCatalogue();
+  const chosen=[['Основная',cloud?.primaryModel],['Резервная',cloud?.fallbackModel],['Эмбеддинги',cloud?.embeddingModel]].filter(x=>x[1]);
+  const missing=chosen.filter(([_,id])=>!models.some(m=>m.id===id));
+  output.textContent=missing.length?'Не найдены в каталоге: '+missing.map(([label,id])=>label+' ('+id+')').join(', '):chosen.length?'Все выбранные модели доступны в каталоге':'Каталог доступен, модели пока не выбраны';
+ }catch(e){output.textContent='Не удалось проверить каталог: '+e.message;}
+};
 function page(name){for(const id of ['appearance','interface','connection','security','performance','notifications','maintenance','about'])document.getElementById(id).hidden=id!==name;document.querySelectorAll('[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===name));sessionStorage.setItem('amayune.page',name);document.getElementById('settingsSubnav').hidden=false;document.getElementById('settingsNav').setAttribute('aria-expanded','true');}
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>page(b.dataset.page));
 document.getElementById('settingsNav').onclick=()=>{const sub=document.getElementById('settingsSubnav');sub.hidden=!sub.hidden;document.getElementById('settingsNav').setAttribute('aria-expanded',String(!sub.hidden));};
