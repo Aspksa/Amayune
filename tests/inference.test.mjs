@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {mkdtempSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';import {saveSettings} from '../server/settings.mjs';import {generate,getUsage} from '../server/inference.mjs';
-function withRoot(fn){const root=mkdtempSync(join(tmpdir(),'amayune-infer-'));try{return fn(root)}finally{rmSync(root,{recursive:true,force:true})}}
+async function withRoot(fn){const root=mkdtempSync(join(tmpdir(),'amayune-infer-'));try{return await fn(root)}finally{rmSync(root,{recursive:true,force:true})}}
 const config={primaryModel:'model-a',fallbackModel:'model-b',budgetTokens:100,maxTokens:30};
 const ok={ok:true,json:async()=>({model:'model-b',choices:[{message:{content:'Ответ'}}],usage:{prompt_tokens:3,completion_tokens:4,total_tokens:7}})};
 test('fallback on server failure, usage from provider response',async()=>{await withRoot(async root=>{saveSettings(root,config);const calls=[];const result=await generate(root,'test-key-123456','Привет',async(_,options)=>{calls.push(JSON.parse(options.body).model);return calls.length===1?{ok:false,status:503}:ok;});assert.deepEqual(calls,['model-a','model-b']);assert.equal(result.fallbackUsed,true);assert.equal(result.text,'Ответ');assert.equal(getUsage(root).totalTokens,7);});});
