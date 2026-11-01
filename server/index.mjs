@@ -6,6 +6,8 @@ import {createEvolutionStore,evolutionContext} from './soul-evolution.mjs';
 import {createGrowthStore,growthContext} from './soul-growth.mjs';
 import {createLivingSoulStore,livingContext,eventCandidates} from './living-soul.mjs';
 import {formatConversationHistory} from './conversation-context.mjs';
+import {createLivingMind,livingMindContext,planInitiative} from './living-mind.mjs';
+import {createUnifiedMindStore,collectMindTimeline} from './unified-mind.mjs';
 import {embedCloud} from './embeddings.mjs';
 import {createAutoIndexer} from './auto-index.mjs';
 import {generate,getUsage,streamGenerate} from './inference.mjs';
@@ -33,6 +35,9 @@ let growthInstance;
 const growth=()=>growthInstance??=(createGrowthStore(root));
 let livingInstance;
 const living=()=>livingInstance??=(createLivingSoulStore(root));
+let mindInstance;const mind=()=>mindInstance??=(createLivingMind(root));
+let unifiedInstance;const unified=()=>unifiedInstance??=(createUnifiedMindStore(root));
+const mindSources=()=>({soul:soul(),evolution:evolution(),growth:growth(),living:living(),mind:mind()});
 const autoIndex=createAutoIndexer({memory,readKey});
 const scheduler=createScheduler();scheduler.enqueue('semantic-index',()=>autoIndex.schedule());
 const api='https://foundation-models.api.cloud.ru/v1/models';
@@ -96,6 +101,17 @@ const server=http.createServer(async(req,res)=>{
    if(!process.env.AMAYUNE_UPDATE_PUBLIC_KEY)return reply(res,409,{error:'Ключ проверки подписи обновлений не настроен'});
    return reply(res,200,{staged:await stageSignedRelease({root,sha,manifest,publicKey:process.env.AMAYUNE_UPDATE_PUBLIC_KEY})});
   }
+  if(req.method==='GET'&&url.pathname==='/api/mind/timeline')return reply(res,200,{timeline:collectMindTimeline(mindSources())});
+  if(req.method==='POST'&&url.pathname==='/api/mind/snapshot')return reply(res,201,{snapshot:unified().capture(mindSources())});
+  if(req.method==='GET'&&url.pathname==='/api/mind/snapshot')return reply(res,200,{snapshot:unified().latest()});
+  if(req.method==='GET'&&url.pathname==='/api/mind/evolution')return reply(res,200,{profile:evolution().profile(),history:evolution().history(),pending:growth().pending()});
+  if(req.method==='POST'&&url.pathname==='/api/mind/evolution/propose'){const {feedback}=await body(req);if(typeof feedback!=='string'||!feedback.trim()||feedback.length>1000)return reply(res,400,{error:'Некорректный отзыв'});return reply(res,201,{proposal:growth().propose(feedback)});}
+  if(req.method==='POST'&&url.pathname==='/api/mind/evolution/approve'){const {id}=await body(req);if(typeof id!=='string'||!id)return reply(res,400,{error:'Некорректный идентификатор'});const delta=growth().approve(id);const result=evolution().evolve(delta,'approved feedback '+id);unified().audit('evolve',id);return reply(res,200,{result});}
+  if(req.method==='POST'&&url.pathname==='/api/mind/evolution/rollback'){const {id}=await body(req);if(typeof id!=='string'||!id)return reply(res,400,{error:'Некорректный идентификатор'});const version=evolution().rollback(id);unified().audit('rollback',id);return reply(res,200,{version});}
+  if(req.method==='GET'&&url.pathname==='/api/mind')return reply(res,200,{state:mind().state(),initiativeEnabled:mind().initiativeEnabled(),events:mind().events()});
+  if(req.method==='PUT'&&url.pathname==='/api/mind/initiative'){const {enabled}=await body(req);if(typeof enabled!=='boolean')return reply(res,400,{error:'Некорректный запрос'});return reply(res,200,{enabled:mind().setInitiative(enabled)});}
+  if(req.method==='POST'&&url.pathname==='/api/mind/reset')return reply(res,200,{state:mind().reset()});
+  if(req.method==='GET'&&url.pathname==='/api/mind/suggestion')return reply(res,200,{suggestion:planInitiative(living().threads(),growth().goals(),{enabled:mind().initiativeEnabled()})});
   if(req.method==='GET'&&url.pathname==='/api/living/proposals')return reply(res,200,{proposals:living().pending()});
   if(req.method==='POST'&&url.pathname==='/api/living/proposals/approve'){const {id}=await body(req);if(typeof id!=='string'||!id)return reply(res,400,{error:'Некорректный идентификатор'});return reply(res,200,{approved:living().approve(id)});}
   if(req.method==='POST'&&url.pathname==='/api/living/proposals/reject'){const {id}=await body(req);if(typeof id!=='string'||!id)return reply(res,400,{error:'Некорректный идентификатор'});living().reject(id);return reply(res,200,{rejected:true});}
@@ -104,7 +120,7 @@ const server=http.createServer(async(req,res)=>{
    const {prompt}=await body(req,18000);
    if(typeof prompt!=='string'||!prompt.trim()||prompt.length>16000||chatId!==undefined&&(typeof chatId!=='string'||chatId.length>128))return reply(res,400,{error:'Некорректный запрос'});
    res.writeHead(200,{'content-type':'text/plain; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});
-   try{let facts=(await memory()).recall(prompt);void autoIndex.schedule();try{const semantic=await autoIndex.recall(prompt,key);facts=[...semantic,...facts.filter(f=>!semantic.some(v=>v.id===f.id))].slice(0,5)}catch{/* keyword fallback */}const store=await memory();const history=store.recentContext(prompt);const corrections=store.feedback(prompt);const summary=history.map(h=>h.title+': '+h.text).join(' | ')+'\n'+corrections.map(f=>'Исправление пользователя: '+f.correction).join(' | ');const enriched=buildContext({prompt,facts,summary});const soulContext=buildSoulContext({message:prompt,preferences:soul().preferences(),corrections:soul().corrections(),reflections:soul().reflections()});const evolving=evolution();const evolvingContext=evolutionContext({message:prompt,profile:evolving.profile(),experiences:evolving.experiences()});const growing=growth();const growingContext=growthContext({message:prompt,episodes:growing.episodes(prompt),goals:growing.goals()});const lived=living();const livedContext=livingContext({message:prompt,memories:lived.memories(prompt),habits:lived.habits(),interests:lived.interests(),openThreads:lived.threads(),milestones:lived.milestones()});const dialogue=chatId?formatConversationHistory(store.history(chatId,null,16),prompt):'';const combined=(soulContext+'\n\n'+evolvingContext+'\n\n'+growingContext+'\n\n'+livedContext+'\n\n'+enriched+'\n\n'+dialogue).slice(0,16000);await streamGenerate(root,key,combined,chunk=>{if(!res.destroyed)res.write(chunk)});}catch(e){if(!res.destroyed)res.write('\n[Ошибка потока: '+(e.status?'Cloud.ru HTTP '+e.status:'соединение прервано')+']');}
+   try{let facts=(await memory()).recall(prompt);void autoIndex.schedule();try{const semantic=await autoIndex.recall(prompt,key);facts=[...semantic,...facts.filter(f=>!semantic.some(v=>v.id===f.id))].slice(0,5)}catch{/* keyword fallback */}const store=await memory();const history=store.recentContext(prompt);const corrections=store.feedback(prompt);const summary=history.map(h=>h.title+': '+h.text).join(' | ')+'\n'+corrections.map(f=>'Исправление пользователя: '+f.correction).join(' | ');const enriched=buildContext({prompt,facts,summary});const soulContext=buildSoulContext({message:prompt,preferences:soul().preferences(),corrections:soul().corrections(),reflections:soul().reflections()});const evolving=evolution();const evolvingContext=evolutionContext({message:prompt,profile:evolving.profile(),experiences:evolving.experiences()});const growing=growth();const growingContext=growthContext({message:prompt,episodes:growing.episodes(prompt),goals:growing.goals()});const lived=living();const livedContext=livingContext({message:prompt,memories:lived.memories(prompt),habits:lived.habits(),interests:lived.interests(),openThreads:lived.threads(),milestones:lived.milestones()});const mindState=mind().observe(prompt);const initiative=planInitiative(lived.threads(),growing.goals(),{enabled:mind().initiativeEnabled()});const mindContext=livingMindContext(mindState,{initiative});const dialogue=chatId?formatConversationHistory(store.history(chatId,null,16),prompt):'';const combined=(mindContext+'\n\n'+soulContext+'\n\n'+evolvingContext+'\n\n'+growingContext+'\n\n'+livedContext+'\n\n'+enriched+'\n\n'+dialogue).slice(0,16000);let responseText='';await streamGenerate(root,key,combined,chunk=>{responseText+=chunk.slice(0,Math.max(0,16000-responseText.length));if(!res.destroyed)res.write(chunk)});mind().review(responseText,{memories:lived.memories(prompt)});}catch(e){if(!res.destroyed)res.write('\n[Ошибка потока: '+(e.status?'Cloud.ru HTTP '+e.status:'соединение прервано')+']');}
    if(!res.destroyed)res.end();if(chatId){for(const item of eventCandidates(prompt)){try{living().propose('memory',item.summary)}catch{}}}return;
   }
   if(req.method==='GET'&&url.pathname==='/api/usage')return reply(res,200,{usage:getUsage(root),budgetTokens:loadSettings(root).budgetTokens});
