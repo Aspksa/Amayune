@@ -46,7 +46,7 @@ const csrf=JSON.parse(document.getElementById('csrf').textContent);
 async function request(path,method='GET',data){const r=await fetch('/api/'+path,{method,headers:{'x-amayune-token':csrf,'content-type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),cache:'no-store'});const result=await r.json();if(!r.ok)throw Error(result.error||'Ошибка HTTP '+r.status);return result;}
 let cloud=null,models=[];
 function cloudFields(){document.querySelectorAll('[data-cloud]').forEach(el=>{el.value=el.type==='checkbox'?'':String(cloud[el.dataset.cloud]??'');if(el.type==='checkbox')el.checked=!!cloud[el.dataset.cloud];});}
-async function loadCloud(){try{const data=await request('settings');cloud=data.settings;cloudFields();cloudMessage(data.hasKey?'Ключ сохранён. Проверка не выполнялась.':'Ключ не сохранён');}catch(e){cloudMessage(e.message);}}
+async function loadCloud(){try{const data=await request('settings');cloud=data.settings;cloudFields();renderModelCatalogue();cloudMessage(data.hasKey?'Ключ сохранён. Проверка не выполнялась.':'Ключ не сохранён');}catch(e){cloudMessage(e.message);}}
 let pending=Promise.resolve();let cloudRevision=0;
 document.querySelectorAll('[data-cloud]').forEach(el=>el.addEventListener('change',()=>{
  if(!cloud)return;
@@ -61,17 +61,19 @@ document.querySelectorAll('[data-cloud]').forEach(el=>el.addEventListener('chang
  });
 }));
 document.getElementById('showKey').onchange=e=>document.getElementById('apiKey').type=e.target.checked?'text':'password';
-document.getElementById('saveKey').onclick=async()=>{const el=document.getElementById('apiKey');try{await request('key','PUT',{key:el.value});el.value='';el.type='password';document.getElementById('showKey').checked=false;await loadCloud();cloudMessage('Ключ проверен Cloud.ru и безопасно сохранён'+(!cloud?.primaryModel?'. Выберите основную модель из каталога и сохраните её.':''));}catch(e){cloudMessage('Не удалось подключить Cloud.ru: '+e.message+' · ключ оставлен в поле для исправления');}};
+document.getElementById('saveKey').onclick=async()=>{const el=document.getElementById('apiKey');try{await request('key','PUT',{key:el.value});el.value='';el.type='password';document.getElementById('showKey').checked=false;await loadCloud();document.getElementById('loadCloudModels').click();cloudMessage('Ключ проверен Cloud.ru и безопасно сохранён'+(!cloud?.primaryModel?'. Выберите основную модель из каталога и сохраните её.':''));}catch(e){cloudMessage('Не удалось подключить Cloud.ru: '+e.message+' · ключ оставлен в поле для исправления');}};
 document.getElementById('deleteKey').onclick=async()=>{if(!confirm('Удалить сохранённый ключ Cloud.ru?'))return;try{await request('key','DELETE');cloudMessage('Ключ удалён');}catch(e){notify(e.message);}};
 document.getElementById('checkAll').onclick=async()=>{const box=document.getElementById('cloudStatus');cloudMessage('Проверяю доступ к списку моделей...');try{const data=await request('models');models=data.models;document.getElementById('models').replaceChildren(...models.map(m=>{const o=document.createElement('option');o.value=m.id;return o;}));const info=document.getElementById('modelInfo');info.replaceChildren(...models.slice(0,100).map(m=>{const p=document.createElement('p');p.textContent=[m.name,'ID: '+m.id,m.context===null?'':'Контекст: '+m.context,m.inputCost===null?'':'Вход: '+m.inputCost,m.outputCost===null?'':'Выход: '+m.outputCost].filter(Boolean).join(' · ');return p;}));cloudMessage('Соединение подтверждено · моделей: '+models.length+' · '+new Date(data.checkedAt).toLocaleString('ru-RU'));renderModelCatalogue();}catch(e){cloudMessage('Проверка не пройдена: '+e.message);}};
 function renderModelCatalogue(){
  const q=document.getElementById('modelSearch').value.trim().toLocaleLowerCase('ru');
  const found=models.filter(m=>m.id.toLocaleLowerCase('ru').includes(q)||m.name.toLocaleLowerCase('ru').includes(q)).slice(0,100);
  const info=document.getElementById('modelInfo');
- info.replaceChildren(...found.map(m=>{const item=document.createElement('div');item.className='model-card';const label=document.createElement('strong');label.textContent=m.name;const meta=document.createElement('small');meta.textContent=m.id+(m.context===null?'':' · Контекст '+m.context);item.append(label,meta);return item;}));
+ const selected=document.getElementById('selectedCloudModel');if(selected)selected.textContent=cloud?.primaryModel?(models.find(m=>m.id===cloud.primaryModel)?.name||cloud.primaryModel):'Пока не выбрана';
+ info.replaceChildren(...found.map(m=>{const item=document.createElement('div');item.className='model-card';const label=document.createElement('strong');label.textContent=m.name;const meta=document.createElement('small');meta.textContent=m.id+(m.context===null?'':' · Контекст '+m.context);const choose=document.createElement('button');choose.type='button';choose.textContent=m.id===cloud?.primaryModel?'Выбрана':'Выбрать';choose.className=m.id===cloud?.primaryModel?'cloud-choice current':'cloud-choice';choose.disabled=m.id===cloud?.primaryModel;choose.onclick=async()=>{choose.disabled=true;choose.textContent='Сохраняю…';try{const updated=await request('settings','PUT',{...cloud,primaryModel:m.id});cloud=updated.settings;cloudFields();renderModelCatalogue();cloudMessage('Модель выбрана: '+m.name);}catch(e){choose.disabled=false;choose.textContent='Выбрать';cloudMessage('Не удалось сохранить модель: '+e.message);}};item.append(label,meta,choose);return item;}));
  document.getElementById('selectionStatus').textContent=models.length?'Показано '+found.length+' из '+models.length+' моделей':'Каталог не загружен: нажмите «Проверить всё»';
 }
 document.getElementById('modelSearch').addEventListener('input',renderModelCatalogue);
+document.getElementById('loadCloudModels').onclick=()=>document.getElementById('checkAll').click();
 document.getElementById('verifySelection').onclick=async()=>{
  const output=document.getElementById('selectionStatus');
  output.textContent='Проверяю актуальный каталог Cloud.ru…';
