@@ -21,3 +21,5 @@ test('reduced motion and responsive layout are present',()=>{
 });
 
 test('final polish offers skip navigation and search feedback',()=>{assert.match(html,/class="skip-link"/);assert.match(html,/id="mainContent"/);assert.match(html,/id="searchEmpty"/);assert.match(js,/searchEmpty/);assert.match(css,/\.skip-link:focus/);assert.match(css,/#status\[data-state=error\]/);});
+
+test('responsive 4K and ultrawide styles are available',()=>{assert.match(css,/@media\(min-width:2560px\)/);assert.match(css,/@media\(min-width:3500px\)/);assert.match(css,/100dvh/);assert.match(css,/grid-template-columns:repeat\(auto-fit/);});
