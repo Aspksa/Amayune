@@ -45,6 +45,6 @@ export function applyUpdate(manifestFile){
   }
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){
-  try{console.log('Backup: '+applyUpdate(process.argv[2]??join(root,'.runtime','updates','manifest.json')));}
+  try{console.log('Backup: '+applyUpdate(process.argv[2]??join(root,'.runtime','updates','staged','manifest.json')));}
   catch(e){console.error('Update aborted: '+e.message);process.exitCode=1;}
 }
