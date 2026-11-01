@@ -43,6 +43,8 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==='GET'&&url.pathname==='/style.css'){res.writeHead(200,{'content-type':'text/css; charset=utf-8'});return res.end(readFileSync(join(root,'web','style.css')));}
   if(!url.pathname.startsWith('/api/'))return reply(res,404,{error:'Не найдено'});
   if(!auth(req))return reply(res,403,{error:'Доступ запрещён'});
+  if(req.method==='POST'&&url.pathname==='/api/intelligence/feedback'){const {request,correction}=await body(req,12000);return reply(res,201,{feedback:(await memory()).recordFeedback(request,correction)});}
+  if(req.method==='GET'&&url.pathname==='/api/intelligence/context'){const query=url.searchParams.get('q')||'';return reply(res,200,{matches:(await memory()).recentContext(query)});}
   if(req.method==='POST'&&url.pathname==='/api/intelligence/analyze'){const {prompt}=await body(req,18000);if(typeof prompt!=='string'||prompt.length>16000)return reply(res,400,{error:'Некорректный запрос'});const task=analyzeTask(prompt);return reply(res,200,{task,route:routeModel(task,loadSettings(root))});}
   if(req.method==='POST'&&url.pathname==='/api/intelligence/candidates'){const {messages}=await body(req,150000);if(!Array.isArray(messages)||messages.length>200)return reply(res,400,{error:'Некорректные сообщения'});return reply(res,200,{candidates:extractCandidates(messages)});}
   if(req.method==='POST'&&url.pathname==='/api/intelligence/summary'){const {messages}=await body(req,150000);if(!Array.isArray(messages)||messages.length>200)return reply(res,400,{error:'Некорректные сообщения'});return reply(res,200,{summary:summarizeHistory(messages)});}
@@ -86,7 +88,7 @@ const server=http.createServer(async(req,res)=>{
    const {prompt}=await body(req,18000);
    if(typeof prompt!=='string'||!prompt.trim()||prompt.length>16000)return reply(res,400,{error:'Некорректный запрос'});
    res.writeHead(200,{'content-type':'text/plain; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});
-   try{let facts=(await memory()).recall(prompt);void autoIndex.schedule();try{const semantic=await autoIndex.recall(prompt,key);facts=[...semantic,...facts.filter(f=>!semantic.some(v=>v.id===f.id))].slice(0,5)}catch{/* keyword fallback */}const enriched=buildContext({prompt,facts});await streamGenerate(root,key,enriched.slice(0,16000),chunk=>{if(!res.destroyed)res.write(chunk)});}catch(e){if(!res.destroyed)res.write('\n[Ошибка потока: '+(e.status?'Cloud.ru HTTP '+e.status:'соединение прервано')+']');}
+   try{let facts=(await memory()).recall(prompt);void autoIndex.schedule();try{const semantic=await autoIndex.recall(prompt,key);facts=[...semantic,...facts.filter(f=>!semantic.some(v=>v.id===f.id))].slice(0,5)}catch{/* keyword fallback */}const store=await memory();const history=store.recentContext(prompt);const corrections=store.feedback(prompt);const summary=history.map(h=>h.title+': '+h.text).join(' | ')+'\n'+corrections.map(f=>'Исправление пользователя: '+f.correction).join(' | ');const enriched=buildContext({prompt,facts,summary});await streamGenerate(root,key,enriched.slice(0,16000),chunk=>{if(!res.destroyed)res.write(chunk)});}catch(e){if(!res.destroyed)res.write('\n[Ошибка потока: '+(e.status?'Cloud.ru HTTP '+e.status:'соединение прервано')+']');}
    if(!res.destroyed)res.end();return;
   }
   if(req.method==='GET'&&url.pathname==='/api/usage')return reply(res,200,{usage:getUsage(root),budgetTokens:loadSettings(root).budgetTokens});
@@ -121,5 +123,5 @@ const server=http.createServer(async(req,res)=>{
 });
 server.listen(port,host,()=>console.log('Amayune ready at http://'+host+':'+port));
 
-const backupTimer=setInterval(()=>{try{tickBackup(root);}catch{console.error('Scheduled backup failed (no secrets logged)');}scheduler.enqueue('semantic-index',()=>autoIndex.schedule());void scheduler.tick().catch(()=>{});},60000);
+const backupTimer=setInterval(()=>{try{tickBackup(root);}catch{console.error('Scheduled backup failed (no secrets logged)');}void (async()=>{try{const store=await memory();store.enqueueJob('semantic-index','semantic-index');for(const job of store.pendingJobs()){try{const result=await autoIndex.schedule();store.finishJob(job.id,!result?.error)}catch{store.finishJob(job.id,false)}}}catch{}})();},60000);
 backupTimer.unref();
