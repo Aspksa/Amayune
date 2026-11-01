@@ -63,7 +63,7 @@ export function createSoulStore(root){
  };
 }
 export function buildSoulContext({message='',preferences=[],corrections=[],reflections=[]}={}){
- const safe=items=>items.slice(0,20).map(item=>JSON.stringify(item).slice(0,500)).join('\n');
+ const safe=items=>relevantMemories(message,items,8).map(item=>JSON.stringify(item).slice(0,500)).join('\n');
  return [
   'Identity: '+SOUL_IDENTITY.name+'; AI assistant, not a human.',
   'Traits: '+SOUL_IDENTITY.traits.join(', '),
