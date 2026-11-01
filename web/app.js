@@ -76,16 +76,13 @@ function searchSettings(q){
 }
 searchInput.addEventListener('input',e=>searchSettings(e.target.value));
 document.addEventListener('keydown',e=>{
- if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();document.body.classList.remove('sidebar-collapsed');searchInput.focus();searchInput.select();}
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();document.body.classList.remove('sidebar-collapsed');setSidebar(false);searchInput.focus();searchInput.select();}
  if(e.key==='Escape'&&document.activeElement===searchInput){searchInput.value='';searchSettings('');searchInput.blur();}
 });
 const sidebarToggle=document.getElementById('sidebarToggle');
 function setSidebar(collapsed){document.body.classList.toggle('sidebar-collapsed',collapsed);sidebarToggle.setAttribute('aria-pressed',String(collapsed));sidebarToggle.setAttribute('aria-label',collapsed?'Развернуть боковое меню':'Свернуть боковое меню');sidebarToggle.title=collapsed?'Развернуть меню':'Свернуть меню';try{localStorage.setItem('amayune.sidebar.collapsed',collapsed?'1':'0');}catch{}}
 sidebarToggle.onclick=()=>setSidebar(!document.body.classList.contains('sidebar-collapsed'));
 try{setSidebar(localStorage.getItem('amayune.sidebar.collapsed')==='1');}catch{setSidebar(false);}
-document.getElementById('quickAppearance').onclick=()=>page('appearance');
-document.getElementById('quickCloud').onclick=()=>page('connection');
-document.getElementById('quickReset').onclick=()=>{if(confirm('Сбросить оформление до стандартного?')){settings=clean();render();save();page('appearance');}};
 document.getElementById('expandGroups').onclick=()=>document.querySelectorAll('section:not([hidden]) details:not([hidden])').forEach(d=>d.open=true);
 document.getElementById('collapseGroups').onclick=()=>document.querySelectorAll('section:not([hidden]) details:not([hidden])').forEach(d=>d.open=false);
 const accents=[['Золото','#D9A441'],['Сакура','#EFA2BC'],['Нефрит','#56B68B'],['Фиалка','#9D86E8'],['Серебро','#BDC5D0'],['Сапфир','#5796DB'],['Рубин','#DF5868'],['Аметист','#B48AE8'],['Бирюза','#55C6C4']];
