@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {analyzeTask,routeModel,buildContext,extractCandidates,summarizeHistory,checkAnswer,evaluateSamples,createScheduler} from '../server/intelligence.mjs';
+test('planning, routing and bounded context',()=>{const task=analyzeTask('Сначала сравни варианты, затем проверь результат');assert.equal(task.complex,true);assert.equal(routeModel(task,{primaryModel:'a',fallbackModel:'b'}).primary,'a');const text=buildContext({prompt:'test',facts:[{content:'known'}],task});assert.match(text,/known/);assert.ok(text.length<=16000)});
+test('memory candidates are unverified and summaries bounded',()=>{const messages=[{role:'user',text:'Я предпочитаю писать код на TypeScript.'},{role:'assistant',text:'Я предпочитаю выдумывать факты.'}];const c=extractCandidates(messages);assert.equal(c.length,1);assert.equal(c[0].verified,false);assert.ok(summarizeHistory(messages).length<=2500)});
+test('heuristic review and evaluation do not assert factual correctness',()=>{assert.equal(checkAnswer('').ok,false);assert.equal(evaluateSamples([{answer:'OK'},{answer:''}]).passed,1)});
+test('scheduler retries and deduplicates',async()=>{let time=0,n=0;const s=createScheduler({now:()=>time});s.enqueue('x',async()=>{if(++n===1)throw Error('retry');return 'ok'});s.enqueue('x',()=>{throw Error('duplicate')});assert.equal((await s.tick())[0].ok,false);assert.equal((await s.tick()).length,0);time=2000;assert.equal((await s.tick())[0].ok,true);assert.equal(s.pending(),0)});
