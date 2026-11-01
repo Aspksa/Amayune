@@ -89,7 +89,7 @@ const searchInput=document.getElementById('search');
 searchInput.setAttribute('aria-label','Поиск настроек');
 function searchSettings(q){
  const term=q.trim().toLocaleLowerCase('ru');
- const sections=['appearance','interface','connection','security','performance','notifications','maintenance','about'];
+ const sections=['appearance','interface','connection','security','performance','notifications','maintenance','updates','about'];
  let target=null,first=null;
  for(const id of sections){
   const section=document.getElementById(id);
@@ -122,7 +122,7 @@ for(const [name,color] of accents){const b=document.createElement('button');b.ty
 const originalRender=render;
 render=function(){originalRender();for(const b of palette.children){b.setAttribute('aria-pressed',String(settings.accent===rgbToHex(b.style.backgroundColor)));}};
 function rgbToHex(rgb){const m=rgb.match(/\d+/g);return m&&m.length>=3?'#'+m.slice(0,3).map(v=>Number(v).toString(16).padStart(2,'0')).join('').toUpperCase():rgb.toUpperCase();}
-let initialPage='appearance';try{const saved=sessionStorage.getItem('amayune.page');if(['appearance','interface','connection','security','performance','notifications','maintenance','about'].includes(saved))initialPage=saved;}catch{}page(initialPage);render();loadCloud();
+let initialPage='appearance';try{const saved=sessionStorage.getItem('amayune.page');if(['appearance','interface','connection','security','performance','notifications','maintenance','updates','about'].includes(saved))initialPage=saved;}catch{}page(initialPage);render();loadCloud();
 
 let diagnosticReport=null;
 document.getElementById('diagnose').onclick=async()=>{
