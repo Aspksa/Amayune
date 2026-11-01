@@ -86,7 +86,7 @@ const server=http.createServer(async(req,res)=>{
    res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"});return res.end(html);
   }
   if(req.method==='GET'&&url.pathname==='/app.js'){res.writeHead(200,{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store'});return res.end(readFileSync(join(root,'web','app.js')));}
-  if(req.method==='GET'&&url.pathname==='/style.css'){res.writeHead(200,{'content-type':'text/css; charset=utf-8'});return res.end(readFileSync(join(root,'web','style.css')));}
+  if(req.method==='GET'&&(url.pathname==='/style.css'||url.pathname==='/studio.css')){res.writeHead(200,{'content-type':'text/css; charset=utf-8','cache-control':'no-store'});return res.end(readFileSync(join(root,'web',url.pathname.slice(1))));}
   if(!url.pathname.startsWith('/api/'))return reply(res,404,{error:'Не найдено'});
   if(!auth(req))return reply(res,403,{error:'Доступ запрещён'});
   if(req.method==='POST'&&url.pathname==='/api/intelligence/feedback'){const {request,correction}=await body(req,12000);return reply(res,201,{feedback:(await memory()).recordFeedback(request,correction)});}
