@@ -7,3 +7,7 @@ if(!canSpeak){voiceButton.hidden=true;stopVoice.hidden=true}
 voiceButton.onclick=()=>{voiceEnabled=!voiceEnabled;voiceButton.setAttribute('aria-pressed',String(voiceEnabled));voiceButton.textContent=voiceEnabled?'🔊':'🔇';if(!voiceEnabled)window.speechSynthesis.cancel()};
 stopVoice.onclick=()=>{if(canSpeak)window.speechSynthesis.cancel()};
 window.amayuneSpeak=text=>{if(!canSpeak||!voiceEnabled||!text)return;window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(String(text).slice(0,12000));utterance.lang='ru-RU';utterance.rate=1;window.speechSynthesis.speak(utterance)};
+
+const originalSpeak=window.amayuneSpeak;
+window.amayuneSpeak=text=>{if(!canSpeak||!voiceEnabled||!text)return;window.speechSynthesis.cancel();const pieces=String(text).match(/[^.!?\n]+[.!?]?/g)||[];const queue=pieces.map(x=>x.trim()).filter(Boolean).slice(0,80);let index=0;const next=()=>{if(!voiceEnabled||index>=queue.length)return;const utterance=new SpeechSynthesisUtterance(queue[index++]);utterance.lang='ru-RU';utterance.rate=0.98;utterance.onend=next;window.speechSynthesis.speak(utterance)};next()};
+area.addEventListener('input',()=>{if(canSpeak&&window.speechSynthesis.speaking)window.speechSynthesis.cancel()});
