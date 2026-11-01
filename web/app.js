@@ -52,12 +52,12 @@ document.querySelectorAll('[data-cloud]').forEach(el=>el.addEventListener('chang
  if(!cloud)return;
  const k=el.dataset.cloud;
  const v=el.type==='checkbox'?el.checked:el.type==='number'?Number(el.value):el.value;
- const previous={...cloud};
- const proposed={...cloud,[k]:v};
+ cloud={...cloud,[k]:v};
  notify('Сохранение Cloud.ru…');
  pending=pending.catch(()=>{}).then(async()=>{
-  try{const x=await request('settings','PUT',proposed);cloud=x.settings;notify('Параметры Cloud.ru сохранены');}
-  catch{cloud=previous;cloudFields();notify('Ошибка сохранения Cloud.ru: изменения отменены');}
+  const snapshot={...cloud};
+  try{const x=await request('settings','PUT',snapshot);notify('Параметры Cloud.ru сохранены');}
+  catch{try{const data=await request('settings');cloud=data.settings;cloudFields();}catch{}notify('Ошибка сохранения Cloud.ru: проверьте параметры');}
  });
 }));
 document.getElementById('showKey').onchange=e=>document.getElementById('apiKey').type=e.target.checked?'text':'password';
