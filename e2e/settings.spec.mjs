@@ -27,3 +27,15 @@ for(const [name,width,height] of [['mobile',375,812],['full-hd',1920,1080],['qhd
   expect(overflow).toBe(false);
  });
 }
+
+test('update center layout and responsive actions',async({page})=>{
+ await page.setViewportSize({width:375,height:812});
+ await page.goto('/');
+ await page.locator('[data-page="updates"]').click();
+ await expect(page.locator('#updates')).toBeVisible();
+ await expect(page.locator('#updateInstalledVersion')).toBeVisible();
+ await expect(page.locator('#updateLatestVersion')).toBeVisible();
+ await expect(page.locator('#checkUpdates')).toBeVisible();
+ await expect(page.locator('#updateHistoryRefresh')).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+2)).toBe(false);
+});
