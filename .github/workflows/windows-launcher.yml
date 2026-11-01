@@ -18,18 +18,25 @@ jobs:
           Get-ChildItem scripts -Filter '*.mjs' | ForEach-Object { node --check $_.FullName; if ($LASTEXITCODE -ne 0) { throw "Syntax error: $_" } }
       - name: Test health module
         run: node --test scripts/health-check.test.mjs
-      - name: Test expected failure with missing app config
+      - name: Verify application health on Windows
         shell: pwsh
         run: |
-          $output = cmd.exe /d /c 'echo.|Amayune.bat' 2>&1
-          $output | Out-Host
-          if ($LASTEXITCODE -eq 0) { throw 'Expected a nonzero exit when application is missing.' }
+          $p = Start-Process node -ArgumentList 'server/index.mjs' -PassThru -NoNewWindow
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 30; $i++) {
+              try {
+                $response = Invoke-WebRequest 'http://127.0.0.1:3000/health' -UseBasicParsing -TimeoutSec 2
+                if ($response.StatusCode -eq 200) { $ready = $true; break }
+              } catch { Start-Sleep -Milliseconds 250 }
+            }
+            if (-not $ready) { throw 'Server health check failed' }
+          } finally { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
       - name: Test Cyrillic and spaced working directory
         shell: pwsh
         run: |
           $target = Join-Path $env:RUNNER_TEMP 'Тест проект с пробелами'
           New-Item -ItemType Directory -Force -Path $target | Out-Null
-          Copy-Item Amayune.bat -Destination $target
           Copy-Item Amayune.bat -Destination $target
           Copy-Item scripts -Recurse -Destination $target
           $output = cmd.exe /d /c ('echo.|"' + (Join-Path $target 'Amayune.bat') + '"') 2>&1
