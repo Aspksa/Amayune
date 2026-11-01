@@ -1,0 +1,123 @@
+/* Amayune Redesign 2026 — unified shell, clearer navigation, calmer surfaces.
+   Loaded last on every page; refines the existing layers without breaking their contracts. */
+
+/* ===== Design tokens ===== */
+:root{
+ --r-font:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+ --r-ease:cubic-bezier(.2,.8,.2,1);
+ --r-panel:color-mix(in srgb,var(--card) 92%,var(--accent) 2%);
+ --r-hover:color-mix(in srgb,var(--accent) 8%,var(--surface));
+ --r-ok:#56b68b;--r-warn:#d9a441;--r-err:#df5868;
+ --r-shadow:0 14px 38px rgba(0,0,0,calc(var(--shadow, .15) * 45%));
+}
+html{-webkit-text-size-adjust:100%}
+body{font-family:var(--r-font)}
+::selection{background:color-mix(in srgb,var(--accent) 35%,transparent)}
+*{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--accent) 45%,var(--line)) transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--accent) 32%,var(--line));border-radius:99px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--accent) 55%,var(--line));background-clip:content-box}
+
+/* ===== Settings sidebar (index.html) ===== */
+#app>aside{transition:width .22s var(--r-ease)}
+#app>aside .brand{user-select:none}
+#app>aside #settingsSubnav .subnav{position:relative;transition:background-color .16s var(--r-ease),color .16s var(--r-ease),border-color .16s var(--r-ease)}
+#app>aside #settingsSubnav .subnav.active{box-shadow:inset 3px 0 0 var(--accent),0 1px 10px rgba(0,0,0,.18)}
+#app>aside .sidebar-bottom>a{text-align:center;letter-spacing:.01em;transition:border-color .16s var(--r-ease),background-color .16s var(--r-ease),transform .16s var(--r-ease)}
+#app>aside .sidebar-bottom>a:hover{background:var(--r-hover);border-color:color-mix(in srgb,var(--accent) 45%,var(--line))!important;transform:translateY(-1px)}
+#app>aside .aside-bottom{display:flex;align-items:center;gap:7px;line-height:1.35}
+.online-dot{flex:none;animation:r-pulse 2.6s ease-in-out infinite}
+@keyframes r-pulse{0%,100%{box-shadow:0 0 0 0 #6fcf9755}50%{box-shadow:0 0 0 5px #6fcf9700}}
+
+/* Workspace tools: sticky search + section chips while scrolling settings */
+.workspace-tools{position:sticky;top:-32px;z-index:5;padding-top:32px;margin-bottom:24px!important}
+.workspace-tools::after{content:'';position:absolute;left:-8px;right:-8px;top:0;bottom:-10px;border-radius:18px;background:linear-gradient(color-mix(in srgb,var(--card) 96%,transparent) 78%,transparent);z-index:-1}
+#app>main .workspace-tools #settingsSubnav .subnav{transition:background-color .16s var(--r-ease),border-color .16s var(--r-ease),color .16s var(--r-ease)}
+#app>main .workspace-tools #settingsSubnav .subnav.active{box-shadow:0 2px 12px rgba(0,0,0,.25)}
+#app>main#mainContent:not([hidden]){scroll-behavior:smooth}
+
+/* Section rhythm and cards */
+#app>main .section-title{padding-top:6px}
+#app>main details{transition:border-color .2s var(--r-ease),box-shadow .2s var(--r-ease)}
+#app>main details:hover{border-color:color-mix(in srgb,var(--accent) 26%,var(--line))}
+#app>main details[open]{box-shadow:var(--r-shadow)}
+#app>main summary:hover{color:var(--accent)}
+#app>main .fields>label{transition:color .15s var(--r-ease)}
+#app>main input[type=range]{cursor:pointer}
+#app>main .actions button,#app>main .file-button{transition:border-color .16s var(--r-ease),background-color .16s var(--r-ease),box-shadow .16s var(--r-ease),transform .12s var(--r-ease)}
+#app>main .actions button:not(:disabled):active,#app>main .file-button:active{transform:translateY(1px)}
+#app>main .primary{box-shadow:0 6px 20px color-mix(in srgb,var(--accent) 26%,transparent)}
+#app>main #status{transition:color .2s,border-color .2s,background-color .2s}
+.settings-close{transition:background-color .16s var(--r-ease),transform .16s var(--r-ease)}
+.settings-close:hover{transform:rotate(90deg)}
+.theme-tiles button{transition:border-color .18s var(--r-ease),transform .18s var(--r-ease),box-shadow .18s var(--r-ease)}
+.theme-tiles button:hover{transform:translateY(-2px);box-shadow:var(--r-shadow)}
+.theme-tiles button[aria-pressed=true]{box-shadow:0 0 0 1px var(--accent),0 10px 26px color-mix(in srgb,var(--accent) 18%,transparent)}
+.accent-dot{transition:transform .14s var(--r-ease),box-shadow .14s var(--r-ease)}
+.accent-dot:hover{transform:scale(1.14)}
+
+/* Breadcrumbs injected by app.js */
+.r-breadcrumb{display:inline-flex;align-items:center;gap:7px;font-size:.7rem;font-weight:750;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin:0 0 6px}
+.r-breadcrumb b{color:var(--accent);font-weight:750}
+.r-breadcrumb i{font-style:normal;opacity:.5}
+
+/* Floating chat & avatar polish */
+#amayune-floating-chat{box-shadow:0 30px 90px #000d;border-color:color-mix(in srgb,var(--accent) 42%,#695436)}
+.amayune-avatar{backdrop-filter:blur(4px)}
+
+/* ===== Chat workspace (chat.html) ===== */
+.shell .sidebar .brand{display:flex;align-items:baseline;gap:9px;user-select:none}
+.shell .workspace-nav{position:relative}
+.shell .workspace-tab,.shell .workspace-settings{position:relative;display:flex;align-items:center;gap:11px;transition:background-color .16s var(--r-ease),color .16s var(--r-ease),border-color .16s var(--r-ease)}
+.shell .workspace-tab::before,.shell .workspace-settings::before{content:'';flex:none;width:20px;height:20px;background:currentColor;opacity:.8;-webkit-mask:var(--tab-glyph) center/contain no-repeat;mask:var(--tab-glyph) center/contain no-repeat}
+.shell [data-workspace="chat"]{--tab-glyph:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 5h16v11H8l-4 4z' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.shell [data-workspace="memory"]{--tab-glyph:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 3 20 8v8l-8 5-8-5V8z' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M12 8v8M8 10v4M16 10v4' stroke='black' stroke-width='2'/%3E%3C/svg%3E")}
+.shell [data-workspace="evolution"]{--tab-glyph:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 11a8 8 0 1 0-2 6M20 4v7h-7' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.shell .workspace-settings{--tab-glyph:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='3.2' fill='none' stroke='black' stroke-width='2'/%3E%3Cpath d='M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")}
+.shell .workspace-tab.active{box-shadow:inset 3px 0 0 var(--premium-gold,#d9a441),0 4px 16px rgba(0,0,0,.28)}
+.shell .new{transition:filter .16s var(--r-ease),transform .14s var(--r-ease),box-shadow .16s var(--r-ease)}
+.shell .new:hover{filter:brightness(1.07);transform:translateY(-1px)}
+.shell .history{scroll-behavior:smooth}
+.shell .history-row{transition:background-color .14s var(--r-ease);border:1px solid transparent}
+.shell .history-row:hover{background:#26232b;border-color:#39332a}
+.shell .history-row button:first-child{border-radius:10px}
+.shell .history-row.active-row{background:#332b21;border-color:#685136}
+.shell .date-label{margin:14px 4px 4px;font-size:.66rem;font-weight:750;letter-spacing:.14em;color:#8d8474;text-transform:uppercase}
+.shell .date-label:first-child{margin-top:2px}
+.shell .main>header{transition:box-shadow .2s var(--r-ease)}
+.shell .main>header.scrolled{box-shadow:0 10px 26px rgba(0,0,0,.32)}
+.shell .head-actions button{transition:border-color .15s var(--r-ease),background-color .15s var(--r-ease),transform .12s var(--r-ease)}
+.shell .head-actions button:hover{border-color:#d9a441;transform:translateY(-1px)}
+.shell .messages{scroll-behavior:smooth}
+.shell .message{animation:r-rise .22s var(--r-ease) both}
+@keyframes r-rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.shell .message.user{box-shadow:0 4px 18px rgba(0,0,0,.25)}
+.shell #composer{transition:border-color .18s var(--r-ease),box-shadow .18s var(--r-ease)}
+.shell #send{transition:filter .15s var(--r-ease),transform .12s var(--r-ease)}
+.shell #send:not(:disabled):hover{filter:brightness(1.08)}
+.shell #attachments{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:7px}
+.shell #attachments button{border:1px solid #615039;background:#241f1a;color:#eccf94;border-radius:99px;padding:6px 12px;font-size:.78rem;cursor:pointer}
+.shell #notice:empty{display:none}
+.command-backdrop:not([hidden]){animation:r-fade .16s ease both}
+.command-dialog{animation:r-pop .2s var(--r-ease) both}
+@keyframes r-fade{from{opacity:0}to{opacity:1}}
+@keyframes r-pop{from{opacity:0;transform:translateY(-10px) scale(.985)}to{opacity:1;transform:none}}
+.command-option{transition:background-color .13s ease,border-color .13s ease}
+.workspace-panel{animation:r-rise .24s var(--r-ease) both}
+
+/* Mobile: bottom tab bar for the main sections, settings stays in sidebar drawer */
+@media(max-width:760px){
+ .shell .mobile-tabs{display:flex!important}
+ .shell .main>.bottom{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+ .shell .main>header{padding-left:8px}
+}
+.shell .mobile-tabs{display:none;position:fixed;left:0;right:0;bottom:0;z-index:40;background:color-mix(in srgb,#111116 92%,transparent);backdrop-filter:blur(10px);border-top:1px solid #39322a;padding:6px max(8px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-right,0px));justify-content:space-around}
+.shell .mobile-tabs a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px;border-radius:12px;color:#9c9384;text-decoration:none;font-size:.66rem;font-weight:650;letter-spacing:.03em}
+.shell .mobile-tabs a svg{width:21px;height:21px}
+.shell .mobile-tabs a[aria-current="page"]{color:#f0cd8a;background:#2c2519}
+
+/* Reduced motion */
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+ .shell .message{animation:none}
+}
