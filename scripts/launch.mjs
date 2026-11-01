@@ -11,6 +11,7 @@ const log=logger(root);
 const statePath=join(root,'.runtime','server-state.json');
 const lockPath=join(root,'.runtime','launch.lock');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function isProcessAlive(pid){try{process.kill(pid,0);return true;}catch(e){return e?.code==='EPERM';}}
 function browser(url){
   if(process.argv.includes('--no-browser'))return;
   if(process.platform==='win32')spawn('cmd.exe',['/d','/s','/c','start','""',url],{detached:true,windowsHide:true,stdio:'ignore'}).unref();
@@ -32,7 +33,7 @@ async function launch(){
   const healthPath=config.health?.path??'/health';
   if(!/^\/[A-Za-z0-9/_?.=-]*$/.test(healthPath))throw Error('Некорректный health.path');
   const existing=getState(root);
-  if(existing?.port>0&&existing.port<65536&&await health('http://127.0.0.1:'+existing.port+healthPath)){
+  if(existing?.port>0&&existing.port<65536&&Number.isInteger(existing.pid)&&existing.pid>0&&isProcessAlive(existing.pid)&&await health('http://127.0.0.1:'+existing.port+healthPath)){
     log('reuse','Сервер уже работает на '+existing.port);
     browser('http://127.0.0.1:'+existing.port);return;
   }
