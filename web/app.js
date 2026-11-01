@@ -64,13 +64,13 @@ document.getElementById('showKey').onchange=e=>document.getElementById('apiKey')
 document.getElementById('saveKey').onclick=async()=>{const el=document.getElementById('apiKey');try{await request('key','PUT',{key:el.value});el.value='';el.type='password';document.getElementById('showKey').checked=false;cloudMessage('Ключ проверен Cloud.ru и безопасно сохранён');}catch(e){el.value='';cloudMessage(e.message);}};
 document.getElementById('deleteKey').onclick=async()=>{if(!confirm('Удалить сохранённый ключ Cloud.ru?'))return;try{await request('key','DELETE');cloudMessage('Ключ удалён');}catch(e){notify(e.message);}};
 document.getElementById('checkAll').onclick=async()=>{const box=document.getElementById('cloudStatus');cloudMessage('Проверяю доступ к списку моделей...');try{const data=await request('models');models=data.models;document.getElementById('models').replaceChildren(...models.map(m=>{const o=document.createElement('option');o.value=m.id;return o;}));const info=document.getElementById('modelInfo');info.replaceChildren(...models.slice(0,100).map(m=>{const p=document.createElement('p');p.textContent=[m.name,'ID: '+m.id,m.context===null?'':'Контекст: '+m.context,m.inputCost===null?'':'Вход: '+m.inputCost,m.outputCost===null?'':'Выход: '+m.outputCost].filter(Boolean).join(' · ');return p;}));cloudMessage('Соединение подтверждено · моделей: '+models.length+' · '+new Date(data.checkedAt).toLocaleString('ru-RU'));}catch(e){cloudMessage('Проверка не пройдена: '+e.message);}};
-function page(name){document.getElementById('appearance').hidden=name!=='appearance';document.getElementById('connection').hidden=name!=='connection';document.querySelectorAll('[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===name));sessionStorage.setItem('amayune.page',name);document.getElementById('settingsSubnav').hidden=false;document.getElementById('settingsNav').setAttribute('aria-expanded','true');}
+function page(name){document.getElementById('appearance').hidden=name!=='appearance';document.getElementById('connection').hidden=name!=='connection';document.getElementById('maintenance').hidden=name!=='maintenance';document.querySelectorAll('[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===name));sessionStorage.setItem('amayune.page',name);document.getElementById('settingsSubnav').hidden=false;document.getElementById('settingsNav').setAttribute('aria-expanded','true');}
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>page(b.dataset.page));
 document.getElementById('settingsNav').onclick=()=>{const sub=document.getElementById('settingsSubnav');sub.hidden=!sub.hidden;document.getElementById('settingsNav').setAttribute('aria-expanded',String(!sub.hidden));};
 const searchInput=document.getElementById('search');
 function searchSettings(q){
  const term=q.trim().toLocaleLowerCase('ru');
- const sections=['appearance','connection'];
+ const sections=['appearance','connection','maintenance'];
  let target=null,first=null;
  for(const id of sections){
   const section=document.getElementById(id);
@@ -101,4 +101,22 @@ for(const [name,color] of accents){const b=document.createElement('button');b.ty
 const originalRender=render;
 render=function(){originalRender();for(const b of palette.children){b.setAttribute('aria-pressed',String(settings.accent===rgbToHex(b.style.backgroundColor)));}};
 function rgbToHex(rgb){const m=rgb.match(/\d+/g);return m&&m.length>=3?'#'+m.slice(0,3).map(v=>Number(v).toString(16).padStart(2,'0')).join('').toUpperCase():rgb.toUpperCase();}
-page(sessionStorage.getItem('amayune.page')==='connection'?'connection':'appearance');render();loadCloud();
+page(['appearance','connection','maintenance'].includes(sessionStorage.getItem('amayune.page'))?sessionStorage.getItem('amayune.page'):'appearance');render();loadCloud();
+
+let diagnosticReport=null;
+document.getElementById('diagnose').onclick=async()=>{
+ const el=document.getElementById('diagnosticResults');el.textContent='Проверка…';
+ try{const data=await request('diagnostics');diagnosticReport=data.diagnostics;el.textContent=JSON.stringify(diagnosticReport,null,2);}
+ catch(e){el.textContent='Ошибка диагностики: '+e.message;}
+};
+document.getElementById('copyDiagnostics').onclick=async()=>{if(!diagnosticReport)return notify('Сначала запустите диагностику');try{await navigator.clipboard.writeText(JSON.stringify(diagnosticReport,null,2));notify('Отчёт скопирован');}catch{notify('Не удалось скопировать отчёт');}};
+function downloadJson(filename,obj){const url=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+document.getElementById('backupExport').onclick=async()=>{
+ try{const data=await request('backup','POST',{appearance:settings});downloadJson('amayune-backup.json',data.backup);document.getElementById('backupStatus').textContent='Копия без секретов создана';}
+ catch(e){document.getElementById('backupStatus').textContent=e.message;}
+};
+document.getElementById('backupImport').onchange=async e=>{
+ const file=e.target.files?.[0];if(!file)return;
+ try{if(file.size>100000)throw Error('Файл слишком большой');const content=JSON.parse(await file.text());if(!confirm('Восстановить параметры из резервной копии?'))return;const result=await request('restore','POST',content);if(result.restored.appearance){settings=clean(result.restored.appearance);render();save();}cloud=result.restored.cloud;cloudFields();document.getElementById('backupStatus').textContent='Настройки восстановлены';}
+ catch(err){document.getElementById('backupStatus').textContent='Не удалось восстановить: '+err.message;}finally{e.target.value='';}
+};
