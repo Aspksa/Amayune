@@ -43,8 +43,14 @@ jobs:
           Copy-Item web -Recurse -Destination $target
           Copy-Item package.json,package-lock.json,launcher.config.json -Destination $target
           $bat = Join-Path $target 'Amayune.bat'
-          $process = Start-Process cmd.exe -ArgumentList ('/d /c ""' + $bat + '" --no-browser"') -PassThru -Wait -NoNewWindow
-          if ($process.ExitCode -ne 0) { throw "BAT returned $($process.ExitCode)" }
+          $process = Start-Process cmd.exe -ArgumentList ('/d /c ""' + $bat + '" --no-browser"') -PassThru -NoNewWindow
+          try {
+            $finished = $process.WaitForExit(45000)
+            if (-not $finished) { throw 'BAT did not exit within 45 seconds' }
+            if ($process.ExitCode -ne 0) { throw "BAT returned $($process.ExitCode)" }
+          } finally {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue }
+          }
           $state = Get-Content (Join-Path $target '.runtime/server-state.json') -Raw | ConvertFrom-Json
           $response = Invoke-WebRequest ("http://127.0.0.1:" + $state.port + "/health") -UseBasicParsing
           if ($response.StatusCode -ne 200) { throw 'HTTP health-check failed' }
