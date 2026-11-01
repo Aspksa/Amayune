@@ -86,7 +86,38 @@ document.getElementById('verifySelection').onclick=async()=>{
 };
 function page(name){for(const id of ['appearance','interface','connection','security','performance','notifications','maintenance','updates','about'])document.getElementById(id).hidden=id!==name;document.querySelectorAll('[data-page]').forEach(n=>{const active=n.dataset.page===name;n.classList.toggle('active',active);if(active)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current');});try{sessionStorage.setItem('amayune.page',name);}catch{}document.getElementById('settingsSubnav').hidden=false;document.getElementById('settingsNav').setAttribute('aria-expanded','true');}
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{page(b.dataset.page);if(window.matchMedia('(max-width:820px)').matches)b.scrollIntoView({block:'nearest',inline:'center',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});});
-document.getElementById('settingsNav').onclick=()=>{const sub=document.getElementById('settingsSubnav');sub.hidden=!sub.hidden;document.getElementById('settingsNav').setAttribute('aria-expanded',String(!sub.hidden));};
+
+// Settings live in a centered workspace. The permanent rail only exposes Settings.
+const workspace=document.getElementById('mainContent');
+const backdrop=document.getElementById('settingsBackdrop');
+const closeWorkspace=document.getElementById('closeSettingsWorkspace');
+const settingsTabs=document.getElementById('settingsSubnav');
+const settingsSearch=document.querySelector('#app>aside .search');
+const workspaceHeader=workspace.querySelector('header');
+const workspaceTools=document.createElement('div');
+workspaceTools.className='workspace-tools';
+workspaceTools.append(settingsSearch,settingsTabs);
+workspaceHeader.insertAdjacentElement('afterend',workspaceTools);
+function toggleSettingsWorkspace(open){
+ workspace.hidden=!open;backdrop.hidden=!open;
+ document.body.classList.toggle('settings-workspace-open',open);
+ document.getElementById('settingsNav').setAttribute('aria-expanded',String(open));
+ if(open){workspace.scrollTop=0;closeWorkspace.focus();}
+ else document.getElementById('settingsNav').focus();
+}
+document.getElementById('settingsNav').onclick=()=>toggleSettingsWorkspace(workspace.hidden);
+closeWorkspace.onclick=()=>toggleSettingsWorkspace(false);
+backdrop.onclick=()=>toggleSettingsWorkspace(false);
+document.addEventListener('keydown',e=>{
+ if(e.key==='Escape'&&!workspace.hidden&&document.activeElement!==document.getElementById('search')){e.preventDefault();toggleSettingsWorkspace(false);}
+ if(e.key==='Tab'&&!workspace.hidden){
+  const focusable=[...workspace.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href]')].filter(el=>el.getClientRects().length&&!el.closest('[hidden]'));
+  if(!focusable.length)return;
+  if(e.shiftKey&&document.activeElement===focusable[0]){e.preventDefault();focusable.at(-1).focus();}
+  else if(!e.shiftKey&&document.activeElement===focusable.at(-1)){e.preventDefault();focusable[0].focus();}
+ }
+});
+toggleSettingsWorkspace(true);
 const searchInput=document.getElementById('search');
 searchInput.setAttribute('aria-label','Поиск настроек');
 function searchSettings(q){
