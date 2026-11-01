@@ -1,0 +1,36 @@
+/* Amayune UX 2026 — quiet, readable, coherent layouts. Existing themes and behavior remain intact. */
+:root{--ux-gold:#d8ad62;--ux-stroke:#3b352c;--ux-surface:#17171b;--ux-soft:#211f20}
+html{font-synthesis:none}body{letter-spacing:.005em}button,a,input,textarea,select{touch-action:manipulation}
+/* Chat: generous spacing, clear navigation hierarchy, readable message width. */
+.shell .sidebar{width:clamp(240px,21vw,300px);padding:24px 18px;gap:16px;background:#111115;border-right:1px solid #393229}
+.shell .sidebar .brand{font-size:24px;line-height:1.25;padding:4px 6px 12px;letter-spacing:.015em}
+.shell .sidebar .brand span{display:block;margin-top:7px;font-size:11px;letter-spacing:.17em;text-transform:uppercase}
+.shell .workspace-nav{padding:6px 0 18px;gap:5px;border-color:#322d29}
+.shell .workspace-tab,.shell .workspace-settings{border-radius:11px;font-size:14px;font-weight:550;min-height:46px;padding:12px 15px}
+.shell .workspace-tab.active{background:#342b20;border:1px solid #756044;color:#f7d99b;box-shadow:inset 3px 0 #d9a441}
+.shell .sidebar .new{background:linear-gradient(115deg,#f2cc83,#c79a4b);color:#21170d;border-radius:12px;min-height:48px;box-shadow:0 6px 24px #b48b3b20}
+.shell .sidebar input{border-radius:12px;min-height:45px;background:#1b1a1d;border-color:#3d372e}
+.shell .history{gap:5px}.shell .history button{padding:13px 14px;border-radius:11px;line-height:1.45}.shell .history button.active{background:#332b21;color:#f8e3bc}
+.shell .back{padding:13px 10px;border-top:1px solid #393229;color:#d1c6b4}
+.shell .main{background:radial-gradient(ellipse 60% 38% at 70% 0%,#6c50220d,transparent),#0c0c10}
+.shell .main>header{height:74px;padding:0 clamp(16px,3vw,44px);border-color:#322d29}
+.shell .main>header strong{font-size:16px;font-weight:650}.shell .head-actions button{min-width:40px;min-height:40px;border-radius:11px;background:#1b1a1d}
+.shell .messages{gap:30px;padding:38px max(24px,calc((100% - 850px)/2))}.shell .message{font-size:15px}.shell .message.user{background:#29231e;border:1px solid #4e4030;padding:18px 21px;border-radius:19px 19px 6px 19px}.shell .message.assistant .content{line-height:1.8}
+.shell .bottom{padding:14px max(20px,calc((100% - 850px)/2)) 24px;background:linear-gradient(transparent,#0c0c10 20%)}
+.shell #composer{background:#1b1a1f;border:1px solid #615039;border-radius:18px;padding:12px;box-shadow:0 8px 32px #0003}.shell #composer:focus-within{border-color:#d9a441;box-shadow:0 0 0 3px #d9a44120}
+.shell #composer textarea{line-height:1.55;min-height:46px}.shell #send{background:linear-gradient(115deg,#f2cc83,#c79a4b);min-height:45px;border-radius:11px;padding:10px 17px}
+.shell .workspace-panel{max-width:1240px;width:100%;margin:0 auto}.shell .workspace-panel-header{background:transparent;backdrop-filter:none}.shell .workspace-item{background:#17171c;border-color:#3c342a}.shell .workspace-stat{background:#17171c}
+/* Settings: use the available screen width instead of a narrow off-centre overlay. */
+body:has(#mainContent) #app>aside{width:68px!important;min-width:68px!important;background:var(--side);border-color:var(--line);padding:18px 7px!important}
+body:has(#mainContent) #app>main#mainContent:not([hidden]){inset:clamp(12px,2.5vh,28px) 88px clamp(12px,2.5vh,28px) 20px!important;max-width:1480px!important;margin:0 auto!important;padding:clamp(20px,3vw,40px)!important;background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:0 18px 70px #0005;scrollbar-gutter:stable}
+body:has(#mainContent) #app>main#mainContent>header{padding-bottom:24px;margin-bottom:28px}
+body:has(#mainContent) #app>main#mainContent>header h1{font-size:clamp(28px,3vw,38px);letter-spacing:-.035em}
+body:has(#mainContent) #app>main .workspace-tools #settingsSubnav{gap:9px}
+body:has(#mainContent) #app>main .workspace-tools #settingsSubnav .subnav{border-radius:12px;min-height:48px;background:var(--surface);border:1px solid var(--line);color:var(--text);font-weight:600}
+body:has(#mainContent) #app>main .workspace-tools #settingsSubnav .subnav.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--card))}
+body:has(#mainContent) #app>main#mainContent details{border-radius:15px;border-color:var(--line);box-shadow:none}
+body:has(#mainContent) #app>main#mainContent input,body:has(#mainContent) #app>main#mainContent select{min-height:42px}
+@media(max-width:900px){.shell .sidebar{width:250px}.shell .messages{padding:24px}.shell .bottom{padding:12px 20px 18px}body:has(#mainContent) #app>main#mainContent:not([hidden]){inset:10px 76px 10px 10px!important;padding:22px!important}}
+@media(max-width:680px){.shell .sidebar{position:absolute;width:min(300px,86vw);z-index:20;inset:0 auto 0 0;padding:18px}.shell .main>header{height:64px;padding:0 12px}.shell .messages{padding:18px 14px;gap:20px}.shell .message.user{max-width:94%}.shell .bottom{padding:10px 12px 16px}.shell #composer{gap:5px;padding:7px}.shell #composer textarea{padding:10px 5px}.shell #send{padding:10px}.shell .workspace-panel{padding:18px 14px}body:has(#mainContent) #app>main#mainContent:not([hidden]){inset:6px 65px 6px 6px!important;padding:16px!important;border-radius:14px}body:has(#mainContent) #app>main .workspace-tools #settingsSubnav{grid-template-columns:1fr 1fr}}
+@media(max-width:420px){body:has(#mainContent) #app>main .workspace-tools #settingsSubnav{grid-template-columns:1fr}body:has(#mainContent) #app>main#mainContent>header{display:block}.shell .head-actions{gap:2px}}
+@media(prefers-reduced-motion:reduce){.shell *{transition-duration:.01ms!important;animation-duration:.01ms!important}}
