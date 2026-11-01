@@ -106,10 +106,11 @@ function toggleSettingsWorkspace(open){
  else document.getElementById('settingsNav').focus();
 }
 document.getElementById('settingsNav').onclick=()=>toggleSettingsWorkspace(workspace.hidden);
-closeWorkspace.onclick=()=>toggleSettingsWorkspace(false);
-backdrop.onclick=()=>toggleSettingsWorkspace(false);
+const returnToChat=()=>location.assign('/chat');
+closeWorkspace.onclick=returnToChat;
+backdrop.onclick=returnToChat;
 document.addEventListener('keydown',e=>{
- if(e.key==='Escape'&&!workspace.hidden&&document.activeElement!==document.getElementById('search')){e.preventDefault();toggleSettingsWorkspace(false);}
+ if(e.key==='Escape'&&!workspace.hidden&&document.activeElement!==document.getElementById('search')){e.preventDefault();returnToChat();}
  if(e.key==='Tab'&&!workspace.hidden){
   const focusable=[...workspace.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href]')].filter(el=>el.getClientRects().length&&!el.closest('[hidden]'));
   if(!focusable.length)return;
@@ -155,7 +156,7 @@ for(const [name,color] of accents){const b=document.createElement('button');b.ty
 const originalRender=render;
 render=function(){originalRender();for(const b of palette.children){b.setAttribute('aria-pressed',String(settings.accent===rgbToHex(b.style.backgroundColor)));}};
 function rgbToHex(rgb){const m=rgb.match(/\d+/g);return m&&m.length>=3?'#'+m.slice(0,3).map(v=>Number(v).toString(16).padStart(2,'0')).join('').toUpperCase():rgb.toUpperCase();}
-let initialPage='appearance';try{const saved=sessionStorage.getItem('amayune.page');if(['appearance','interface','connection','security','performance','notifications','maintenance','updates','about'].includes(saved))initialPage=saved;}catch{}page(initialPage);render();loadCloud();
+let initialPage='appearance';try{const pages=['appearance','interface','connection','security','performance','notifications','maintenance','updates','about'];const requested=location.hash.slice(1),saved=sessionStorage.getItem('amayune.page');if(pages.includes(requested))initialPage=requested;else if(pages.includes(saved))initialPage=saved;}catch{}page(initialPage);render();loadCloud();
 
 let diagnosticReport=null;
 document.getElementById('diagnose').onclick=async()=>{
