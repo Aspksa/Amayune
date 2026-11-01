@@ -1,6 +1,7 @@
 import http from 'node:http';
 import {generate,getUsage} from './inference.mjs';
 import {checkGitHubUpdate} from './github-updates.mjs';
+import {stageSignedRelease} from '../scripts/stage-release.mjs';
 import {getBackupPolicy,saveBackupPolicy,tickBackup} from './backup-policy.mjs';
 import {listBackups,makeBackup,recoverBackup} from './backups.mjs';
 import {createBackup,restoreBackup,diagnostics} from './maintenance.mjs';
@@ -33,6 +34,13 @@ const server=http.createServer(async(req,res)=>{
   if(!url.pathname.startsWith('/api/'))return reply(res,404,{error:'Не найдено'});
   if(!auth(req))return reply(res,403,{error:'Доступ запрещён'});
   if(req.method==='GET'&&url.pathname==='/api/update/check')return reply(res,200,{update:await checkGitHubUpdate(root)});
+  if(req.method==='POST'&&url.pathname==='/api/update/stage'){
+   const {sha,manifest}=await body(req);
+   const update=await checkGitHubUpdate(root);
+   if(update.sha!==sha||update.ci!=='success')return reply(res,409,{error:'Версия GitHub изменилась или CI не пройден'});
+   if(!process.env.AMAYUNE_UPDATE_PUBLIC_KEY)return reply(res,409,{error:'Ключ проверки подписи обновлений не настроен'});
+   return reply(res,200,{staged:await stageSignedRelease({root,sha,manifest,publicKey:process.env.AMAYUNE_UPDATE_PUBLIC_KEY})});
+  }
   if(req.method==='GET'&&url.pathname==='/api/usage')return reply(res,200,{usage:getUsage(root),budgetTokens:loadSettings(root).budgetTokens});
   if(req.method==='POST'&&url.pathname==='/api/generate'){
    const key=readKey(root);if(!key)return reply(res,409,{error:'Ключ Cloud.ru не сохранён'});
