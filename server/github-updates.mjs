@@ -9,11 +9,14 @@ async function github(path,fetcher=fetch){
  if(!response.ok)throw Object.assign(Error('GitHub HTTP '+response.status),{status:502});
  return response.json();
 }
+const REQUIRED_CHECKS=new Set(['settings (ubuntu-latest)','settings (windows-2022)','chromium','launcher']);
 export function ciState(runs){
  if(!Array.isArray(runs)||!runs.length)return 'none';
  if(runs.some(r=>r.status==='completed'&&r.conclusion!=='success'&&r.conclusion!=='skipped'&&r.conclusion!=='neutral'))return 'failure';
  if(runs.some(r=>r.status!=='completed'))return 'pending';
- return runs.some(r=>r.conclusion==='success')?'success':'none';
+ const byName=new Map(runs.map(r=>[r.name,r]));
+ if([...REQUIRED_CHECKS].some(name=>!byName.has(name)))return 'none';
+ return [...REQUIRED_CHECKS].every(name=>byName.get(name).conclusion==='success')?'success':'failure';
 }
 export function installedVersion(root){
  const marker=join(root,'.runtime','updates','installed.json');
