@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {createBackup,restoreBackup,diagnostics} from './maintenance.mjs';
 import {listCloudModels} from './cloudru.mjs';
 import {randomBytes,timingSafeEqual} from 'node:crypto';
 import {readFileSync,existsSync} from 'node:fs';
@@ -27,6 +28,9 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==='GET'&&url.pathname==='/style.css'){res.writeHead(200,{'content-type':'text/css; charset=utf-8'});return res.end(readFileSync(join(root,'web','style.css')));}
   if(!url.pathname.startsWith('/api/'))return reply(res,404,{error:'Не найдено'});
   if(!auth(req))return reply(res,403,{error:'Доступ запрещён'});
+  if(req.method==='GET'&&url.pathname==='/api/diagnostics')return reply(res,200,{diagnostics:diagnostics(root)});
+  if(req.method==='POST'&&url.pathname==='/api/backup')return reply(res,200,{backup:createBackup(root,(await body(req)).appearance??null)});
+  if(req.method==='POST'&&url.pathname==='/api/restore')return reply(res,200,{restored:restoreBackup(root,await body(req))});
   if(req.method==='GET'&&url.pathname==='/api/settings')return reply(res,200,{settings:loadSettings(root),hasKey:hasKey(root)});
   if(req.method==='PUT'&&url.pathname==='/api/settings')return reply(res,200,{settings:saveSettings(root,await body(req))});
   if(req.method==='PUT'&&url.pathname==='/api/key'){
