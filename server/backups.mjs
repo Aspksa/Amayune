@@ -3,7 +3,7 @@ import {join} from 'node:path';
 import {createBackup,restoreBackup} from './maintenance.mjs';
 const directory=root=>join(root,'data','backups');
 const pattern=/^backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.json$/;
-export function listBackups(root){try{return readdirSync(directory(root)).filter(x=>pattern.test(x)).sort().reverse().slice(0,50).map(name=>({name,size:statSync(join(directory(root),name)).size}));}catch{return [];}}
+export function listBackups(root){try{return readdirSync(directory(root)).filter(x=>pattern.test(x)).sort().reverse().map(name=>({name,size:statSync(join(directory(root),name)).size}));}catch{return [];}}
 export function makeBackup(root,retention=10){
  if(!Number.isInteger(retention)||retention<1||retention>30)throw Error('Недопустимое число копий');
  const dir=directory(root);mkdirSync(dir,{recursive:true});
