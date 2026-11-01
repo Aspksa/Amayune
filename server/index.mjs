@@ -121,5 +121,5 @@ const server=http.createServer(async(req,res)=>{
 });
 server.listen(port,host,()=>console.log('Amayune ready at http://'+host+':'+port));
 
-const backupTimer=setInterval(()=>{try{tickBackup(root);}catch{console.error('Scheduled backup failed (no secrets logged)');}},60000);
+const backupTimer=setInterval(()=>{try{tickBackup(root);}catch{console.error('Scheduled backup failed (no secrets logged)');}scheduler.enqueue('semantic-index',()=>autoIndex.schedule());void scheduler.tick().catch(()=>{});},60000);
 backupTimer.unref();
