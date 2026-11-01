@@ -20,6 +20,11 @@ export async function openMemory(root){
    db.exec('BEGIN IMMEDIATE');
    try{db.exec('DELETE FROM conversations');for(const c of chats){if(typeof c.id!=='string'||c.id.length>128||!c.id||typeof c.title!=='string'||c.title.length>200||!Array.isArray(c.messages)||c.messages.length>200)throw Error('Некорректный чат');insertChat.run(c.id,c.title,Number.isSafeInteger(c.updated)?c.updated:Date.now());for(const m of c.messages){if(!['user','assistant'].includes(m.role)||typeof m.text!=='string'||m.text.length>100000)throw Error('Некорректное сообщение');insertMessage.run(randomUUID(),c.id,m.role,m.text,Date.now())}}db.exec('COMMIT')}catch(e){db.exec('ROLLBACK');throw Object.assign(e,{status:400})}
   },
+  addKnowledge(content,source='user'){if(typeof content!=='string'||!content.trim()||content.length>20000||typeof source!=='string'||source.length>200)throw Object.assign(Error('Некорректные знания'),{status:400});const id=randomUUID();db.prepare('INSERT INTO knowledge(id,content,source,created,verified) VALUES(?,?,?,?,0)').run(id,content.trim(),source,Date.now());return {id,verified:false}},
+  knowledge(){return db.prepare('SELECT id,content,source,created,verified FROM knowledge ORDER BY created DESC LIMIT 200').all()},
+  verifyKnowledge(id,verified){if(typeof id!=='string'||typeof verified!=='boolean')throw Object.assign(Error('Некорректный запрос'),{status:400});const result=db.prepare('UPDATE knowledge SET verified=? WHERE id=?').run(verified?1:0,id);if(!result.changes)throw Object.assign(Error('Запись не найдена'),{status:404});return {id,verified}},
+  removeKnowledge(id){const result=db.prepare('DELETE FROM knowledge WHERE id=?').run(id);return {deleted:result.changes>0}},
+  recall(query){if(typeof query!=='string')return [];const words=[...new Set((query.toLowerCase().match(/[\\p{L}\\p{N}]{3,}/gu)||[]).slice(-40))];if(!words.length)return [];const rows=db.prepare('SELECT id,content,source FROM knowledge WHERE verified=1 ORDER BY created DESC LIMIT 1000').all();return rows.map(r=>({...r,score:words.reduce((n,w)=>n+(r.content.toLowerCase().includes(w)?1:0),0)})).filter(r=>r.score>0).sort((a,b)=>b.score-a.score).slice(0,5).map(({id,content,source})=>({id,content:content.slice(0,2500),source}))},
   close(){db.close()}
  };
 }
