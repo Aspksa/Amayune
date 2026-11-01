@@ -14,7 +14,7 @@ const host='127.0.0.1',port=Number(process.env.PORT||3000);
 const token=randomBytes(32).toString('hex');
 const api='https://foundation-models.api.cloud.ru/v1/models';
 function reply(res,code,obj){res.writeHead(code,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'});res.end(JSON.stringify(obj));}
-function body(req){return new Promise((resolve,reject)=>{let value='';req.on('data',chunk=>{value+=chunk;if(value.length>12000){reject(Error('Слишком большой запрос'));req.destroy();}});req.on('end',()=>{try{resolve(JSON.parse(value||'{}'));}catch{reject(Error('Некорректный JSON'));}});req.on('error',reject);});}
+function body(req){return new Promise((resolve,reject)=>{let value='';req.on('data',chunk=>{value+=chunk;if(value.length>12000){reject(Object.assign(Error('Слишком большой запрос'),{status:413}));req.resume();}});req.on('end',()=>{try{resolve(JSON.parse(value||'{}'));}catch{reject(Error('Некорректный JSON'));}});req.on('error',reject);});}
 function safeHost(req){return req.headers.host===host+':'+port||req.headers.host==='localhost:'+port;}
 function sameOrigin(req){const origin=req.headers.origin;return !origin||origin==='http://'+host+':'+port||origin==='http://localhost:'+port;}
 function auth(req){const provided=req.headers['x-amayune-token'];return typeof provided==='string'&&provided.length===token.length&&timingSafeEqual(Buffer.from(provided),Buffer.from(token));}
