@@ -14,10 +14,12 @@ function safeHost(req){return req.headers.host===host+':'+port||req.headers.host
 function sameOrigin(req){const origin=req.headers.origin;return !origin||origin==='http://'+host+':'+port||origin==='http://localhost:'+port;}
 function auth(req){const provided=req.headers['x-amayune-token'];return typeof provided==='string'&&provided.length===token.length&&timingSafeEqual(Buffer.from(provided),Buffer.from(token));}
 async function models(key){
- const r=await fetch(api,{headers:{authorization:'Bearer '+key},signal:AbortSignal.timeout(12000)});
+ let r;
+ try{r=await fetch(api,{headers:{authorization:'Bearer '+key},signal:AbortSignal.timeout(12000)});}
+ catch(e){throw Object.assign(Error(e.name==='TimeoutError'?'Превышено время ожидания Cloud.ru':'Нет соединения с Cloud.ru'),{status:503});}
  if(!r.ok){const status=r.status;throw Object.assign(Error(status===401||status===403?'Авторизация отклонена':status===429?'Превышен лимит Cloud.ru':'Cloud.ru: HTTP '+status),{status:status===401||status===403?401:status===429?429:502});}
  const data=await r.json();
- if(!Array.isArray(data.data))throw Error('Некорректный ответ Cloud.ru');
+ if(!Array.isArray(data.data))throw Object.assign(Error('Некорректный ответ Cloud.ru'),{status:502});
  return data.data.filter(m=>typeof m.id==='string').map(m=>({id:m.id,name:m.metadata?.name||m.id,description:m.metadata?.readme||'',context:Number.isFinite(m.max_model_len)?m.max_model_len:null,inputCost:Number.isFinite(m.metadata?.prompt_tokens_cost)?m.metadata.prompt_tokens_cost:null,outputCost:Number.isFinite(m.metadata?.generated_tokens_cost)?m.metadata.generated_tokens_cost:null})).slice(0,500);
 }
 const server=http.createServer(async(req,res)=>{
@@ -36,8 +38,11 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==='GET'&&url.pathname==='/api/settings')return reply(res,200,{settings:loadSettings(root),hasKey:hasKey(root)});
   if(req.method==='PUT'&&url.pathname==='/api/settings')return reply(res,200,{settings:saveSettings(root,await body(req))});
   if(req.method==='PUT'&&url.pathname==='/api/key'){
-   saveKey(root,(await body(req)).key);
-   return reply(res,200,{saved:true});
+   const {key}=await body(req);
+   if(typeof key!=='string'||key.length<12||key.length>8192||key.trim()!==key||/[\x00-\x1f\x7f]/.test(key))return reply(res,400,{error:'Некорректный формат API-ключа'});
+   const verified=await models(key);
+   saveKey(root,key);
+   return reply(res,200,{saved:true,verified:true,modelCount:verified.length,checkedAt:new Date().toISOString()});
   }
   if(req.method==='DELETE'&&url.pathname==='/api/key'){deleteKey(root);return reply(res,200,{saved:false});}
   if(req.method==='GET'&&url.pathname==='/api/models'){
