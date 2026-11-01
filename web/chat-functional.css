@@ -1,0 +1,5 @@
+/* Functional chat composer enhancements */
+#stop-generation:not([hidden]){display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #ad715a;border-radius:10px;background:#382622;color:#ffdbcc;font-weight:650;padding:11px 14px;min-height:44px;white-space:nowrap}
+#stop-generation:hover{background:#523029}
+#prompt{overflow-y:auto;resize:none;min-height:46px;max-height:240px;line-height:1.55}
+@media(max-width:540px){#stop-generation:not([hidden]){font-size:12px;padding:9px}#composer{flex-wrap:wrap}#prompt{flex-basis:100%;order:-1}}
