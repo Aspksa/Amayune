@@ -1,6 +1,6 @@
 import {existsSync,readFileSync,writeFileSync,mkdirSync,copyFileSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
-import {applyUpdate} from './update.mjs';
+import {applyUpdate,restoreUpdate} from './update.mjs';
 import {validateSignedManifest,inspectStagedFiles} from './update-validation.mjs';
 const directory=root=>join(root,'.runtime','updates');
 const pending=root=>join(directory(root),'pending.json');
@@ -30,9 +30,10 @@ export function applyPendingUpdate(root){
  if(p.state==='booting')throw Error('Previous update not confirmed; rollback required');
  if(p.state!=='ready')throw Error('Unknown update state');
  const manifest=join(directory(root),'staged','manifest.json');
- const backup=applyUpdate(manifest);
- p.state='booting';p.backup=backup;
- writeFileSync(file,JSON.stringify(p));
+ const backup=applyUpdate(manifest,root,(prepared)=>{
+  p.state='booting';p.backup=prepared;
+  writeFileSync(file,JSON.stringify(p));
+ });
  return p;
 }
 export function finishPendingUpdate(root,healthy){
@@ -41,13 +42,7 @@ export function finishPendingUpdate(root,healthy){
  const p=JSON.parse(readFileSync(file,'utf8'));
  if(p.state!=='booting')return false;
  if(!healthy){
-  const manifest=JSON.parse(readFileSync(join(p.backup,'manifest.json'),'utf8'));
-  const files=validateSignedManifest(manifest,process.env.AMAYUNE_UPDATE_PUBLIC_KEY);
-  for(const entry of files){
-   const original=join(p.backup,entry.path),destination=join(root,entry.path);
-   if(existsSync(original))copyFileSync(original,destination);
-   else rmSync(destination,{force:true});
-  }
+  restoreUpdate(root,p.backup);
  }else{
   writeFileSync(join(directory(root),'installed.json'),JSON.stringify({sha:p.sha,at:new Date().toISOString()}));
   rmSync(join(directory(root),'staged'),{recursive:true,force:true});
