@@ -44,7 +44,9 @@ if($mode -eq 'encrypt') {
 }`;
 function protect(mode,content){
  if(process.platform!=='win32')throw Error('Хранение секретов доступно только на Windows с DPAPI');
- const p=spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',dpapi,mode],{input:content,encoding:'utf8',maxBuffer:65536,windowsHide:true});
+ const script=dpapi.replace('$mode=$args[0]',`$mode='${mode}'`);
+ const encoded=Buffer.from(script,'utf16le').toString('base64');
+ const p=spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-EncodedCommand',encoded],{input:content,encoding:'utf8',maxBuffer:65536,windowsHide:true});
  if(p.status!==0||!p.stdout)throw Error('Ошибка Windows DPAPI');
  return p.stdout;
 }
