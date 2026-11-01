@@ -171,3 +171,7 @@ async function refreshBackups(){
 document.getElementById('backupRefresh').onclick=refreshBackups;
 document.getElementById('backupSnapshot').onclick=async()=>{try{await request('backups','POST',{});notify('Резервная копия создана');await refreshBackups();}catch(e){notify('Ошибка создания копии: '+e.message);}};
 refreshBackups();
+
+async function loadBackupPolicy(){try{const {policy}=await request('backup-policy');document.getElementById('backupAutoEnabled').checked=policy.enabled;document.getElementById('backupAutoInterval').value=String(policy.intervalHours);document.getElementById('backupAutoRetention').value=String(policy.retention);document.getElementById('backupPolicyStatus').textContent=policy.enabled?'Автоматические копии включены':'Автоматические копии отключены';}catch(e){document.getElementById('backupPolicyStatus').textContent='Ошибка: '+e.message;}}
+document.getElementById('backupPolicySave').onclick=async()=>{try{const data=await request('backup-policy','PUT',{enabled:document.getElementById('backupAutoEnabled').checked,intervalHours:Number(document.getElementById('backupAutoInterval').value),retention:Number(document.getElementById('backupAutoRetention').value)});document.getElementById('backupPolicyStatus').textContent=data.policy.enabled?'Расписание сохранено: каждые '+data.policy.intervalHours+' ч':'Автоматическое копирование выключено';}catch(e){document.getElementById('backupPolicyStatus').textContent='Не сохранено: '+e.message;}};
+loadBackupPolicy();
