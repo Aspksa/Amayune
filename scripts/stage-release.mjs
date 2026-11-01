@@ -37,6 +37,7 @@ export async function stageSignedRelease({root,sha,manifest,publicKey,fetcher=fe
   // Refuse replacing an existing prepared update, including on POSIX where rename can replace directories.
   try{await stat(target);throw Error('A staged update already exists');}catch(e){if(e.code!=='ENOENT')throw e;}
   await writeFile(join(temporary,'manifest.json'),JSON.stringify(manifest),{flag:'wx'});
+  await writeFile(join(temporary,'source.json'),JSON.stringify({sha}),{flag:'wx'});
   await rename(temporary,target);
   return {files:files.length,bytes:total,sha};
  }catch(error){await rm(temporary,{recursive:true,force:true});throw error;}

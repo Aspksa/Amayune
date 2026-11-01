@@ -5,6 +5,7 @@ import {spawn,spawnSync} from 'node:child_process';
 import net from 'node:net';
 import {randomBytes} from 'node:crypto';
 import {health,waitHealth} from './health-check.mjs';
+import {updateStatus,applyPendingUpdate,finishPendingUpdate} from './update-lifecycle.mjs';
 import {prepare} from './dependencies.mjs';
 import {logger,ensureWritable,getState} from './recovery.mjs';
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
@@ -34,7 +35,15 @@ async function launch(){
   if(!/^[A-Za-z0-9:_-]+$/.test(config.start?.script??''))throw Error('Некорректный start.script');
   const healthPath=config.health?.path??'/health';
   if(!/^\/[A-Za-z0-9/_?.=-]*$/.test(healthPath))throw Error('Некорректный health.path');
+  const update=updateStatus(root);
+  if(update.state==='invalid')throw Error('Повреждён статус обновления; требуется ручная проверка');
   const existing=getState(root);
+  if(update.state==='ready'&&existing?.pid&&isProcessAlive(existing.pid))throw Error('Закройте работающий Amayune перед установкой обновления');
+  if(update.state==='booting'){
+    log('update','Предыдущий запуск не подтвердил обновление; выполняю откат');
+    finishPendingUpdate(root,false);
+  }
+  const installing=update.state==='ready';
   if(existing?.port>0&&existing.port<65536&&Number.isInteger(existing.pid)&&existing.pid>0&&isProcessAlive(existing.pid)&&await identityMatches(existing.port,healthPath,existing.instanceId)){
     log('reuse','Сервер уже работает на '+existing.port);
     browser('http://127.0.0.1:'+existing.port);return;
@@ -59,6 +68,7 @@ async function launch(){
       const result=spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',join(root,'scripts','bootstrap-python.ps1'),'-Root',root],{stdio:'inherit'});
       if(result.status!==0)throw Error('Python недоступен.');
     }
+    if(installing){applyPendingUpdate(root);log('update','Обновление применено, проверяю запуск');}
     prepare(root,config,log);
     const port=await availablePort();
     const instanceId=randomBytes(24).toString('hex');
@@ -73,9 +83,16 @@ async function launch(){
       else {try{process.kill(-child.pid);}catch{}}
       throw Error('Сервер не ответил на HTTP health-check: '+url);
     }
+    if(installing){finishPendingUpdate(root,true);log('update','Обновление подтверждено');}
     writeFileSync(statePath,JSON.stringify({port,pid:child.pid,instanceId,at:new Date().toISOString()}));
     log('ready','HTTP готов: '+url);
     browser('http://127.0.0.1:'+port);
+  }catch(e){
+    if(installing&&updateStatus(root).state==='booting'){
+      try{finishPendingUpdate(root,false);log('update','Откат выполнен');}
+      catch(rollbackError){log('error','Ошибка отката: '+rollbackError.message,1);}
+    }
+    throw e;
   }finally{
     closeSync(fd);unlinkSync(lockPath);
   }
