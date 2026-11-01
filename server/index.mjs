@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {openMemory} from './memory.mjs';
 import {generate,getUsage,streamGenerate} from './inference.mjs';
 import {checkGitHubUpdate,updateHistory,updateChanges} from './github-updates.mjs';
 import {stageSignedRelease} from '../scripts/stage-release.mjs';
@@ -15,6 +16,7 @@ import {DEFAULTS,loadSettings,saveSettings,saveKey,readKey,hasKey,deleteKey} fro
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const host='127.0.0.1',port=Number(process.env.PORT||3000);
 const token=randomBytes(32).toString('hex');
+let memoryPromise;const memory=()=>memoryPromise??=(openMemory(root).catch(e=>{memoryPromise=null;throw e}));
 const api='https://foundation-models.api.cloud.ru/v1/models';
 function reply(res,code,obj){res.writeHead(code,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'});res.end(JSON.stringify(obj));}
 function body(req,limit=12000){return new Promise((resolve,reject)=>{let value='';req.on('data',chunk=>{value+=chunk;if(value.length>limit){reject(Object.assign(Error('Слишком большой запрос'),{status:413}));req.resume();}});req.on('end',()=>{try{resolve(JSON.parse(value||'{}'));}catch{reject(Error('Некорректный JSON'));}});req.on('error',reject);});}
@@ -36,6 +38,8 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==='GET'&&url.pathname==='/style.css'){res.writeHead(200,{'content-type':'text/css; charset=utf-8'});return res.end(readFileSync(join(root,'web','style.css')));}
   if(!url.pathname.startsWith('/api/'))return reply(res,404,{error:'Не найдено'});
   if(!auth(req))return reply(res,403,{error:'Доступ запрещён'});
+  if(req.method==='GET'&&url.pathname==='/api/chats')return reply(res,200,{chats:(await memory()).list()});
+  if(req.method==='PUT'&&url.pathname==='/api/chats'){const {chats}=await body(req,2_000_000);(await memory()).save(chats);return reply(res,200,{saved:true});}
   if(req.method==='GET'&&url.pathname==='/api/update/history')return reply(res,200,{history:await updateHistory(root)});
   if(req.method==='GET'&&url.pathname==='/api/update/changes')return reply(res,200,{changes:await updateChanges(url.searchParams.get('sha'))});
   if(req.method==='GET'&&url.pathname==='/api/update/check')return reply(res,200,{update:await checkGitHubUpdate(root),installation:updateStatus(root)});
