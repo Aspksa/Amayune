@@ -18,6 +18,9 @@ if /i "%NODE_EXE%"=="node.exe" (
 ) else (
   if not exist "%NODE_EXE%" goto bootstrap_error
 )
+if /i not "%NODE_EXE%"=="node.exe" (
+  for %%I in ("%NODE_EXE%") do set "PATH=%%~dpI;%PATH%"
+)
 chcp 65001 >nul
 "%NODE_EXE%" "scripts\launch.mjs" %*
 set "RC=%ERRORLEVEL%"
