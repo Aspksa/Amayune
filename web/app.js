@@ -175,3 +175,19 @@ refreshBackups();
 async function loadBackupPolicy(){try{const {policy}=await request('backup-policy');document.getElementById('backupAutoEnabled').checked=policy.enabled;document.getElementById('backupAutoInterval').value=String(policy.intervalHours);document.getElementById('backupAutoRetention').value=String(policy.retention);document.getElementById('backupPolicyStatus').textContent=policy.enabled?'Автоматические копии включены':'Автоматические копии отключены';}catch(e){document.getElementById('backupPolicyStatus').textContent='Ошибка: '+e.message;}}
 document.getElementById('backupPolicySave').onclick=async()=>{try{const data=await request('backup-policy','PUT',{enabled:document.getElementById('backupAutoEnabled').checked,intervalHours:Number(document.getElementById('backupAutoInterval').value),retention:Number(document.getElementById('backupAutoRetention').value)});document.getElementById('backupPolicyStatus').textContent=data.policy.enabled?'Расписание сохранено: каждые '+data.policy.intervalHours+' ч':'Автоматическое копирование выключено';}catch(e){document.getElementById('backupPolicyStatus').textContent='Не сохранено: '+e.message;}};
 loadBackupPolicy();
+
+async function refreshCloudUsage(){
+ const out=document.getElementById('usageSummary');
+ try{const data=await request('usage');out.textContent='Запросов: '+data.usage.requests+' · Токенов: '+data.usage.totalTokens+' / '+data.budgetTokens+' · Без сведений usage: '+data.usage.unknownUsageRequests;}
+ catch(e){out.textContent='Ошибка статистики: '+e.message;}
+}
+document.getElementById('refreshUsage').onclick=refreshCloudUsage;
+document.getElementById('generationSend').onclick=async()=>{
+ const btn=document.getElementById('generationSend'),out=document.getElementById('generationResponse');
+ if(!confirm('Отправить запрос Cloud.ru? Операция может расходовать оплачиваемые токены.'))return;
+ btn.disabled=true;out.textContent='Генерация…';
+ try{const data=await request('generate','POST',{prompt:document.getElementById('generationPrompt').value});out.textContent=data.text+'\n\nМодель: '+data.model+(data.fallbackUsed?' · резервная':'');await refreshCloudUsage();}
+ catch(e){out.textContent='Ошибка генерации: '+e.message;}
+ finally{btn.disabled=false;}
+};
+refreshCloudUsage();
