@@ -1,9 +1,9 @@
-# Semantic memory (optional)
+# Automatic semantic memory
 
-Amayune can store embedding vectors alongside reviewed knowledge in portable SQLite. Configure the environment variable `AMAYUNE_EMBEDDING_MODEL` with an embedding model ID supported by your Cloud.ru account. An API key must already be saved in Amayune.
+Amayune automatically discovers embedding models from the Cloud.ru model catalog and tests candidate compatibility. If needed, `AMAYUNE_EMBEDDING_MODEL` may override automatic selection. The saved Cloud.ru API key is reused; no separate credentials are required.
 
-Call `POST /api/knowledge/index` with the existing local CSRF header to index up to 20 approved knowledge records per request. Repeat until `remaining` is zero. Indexing sends approved knowledge text to Cloud.ru and may incur charges.
+When knowledge is approved, indexing is queued automatically. Chat requests also trigger indexing of any pending approved entries, in batches of 20, while responses can use previously indexed vectors. If the provider has no compatible embedding model, keyword retrieval continues to work. Model discovery retries after five minutes, and failed indexing has a one-minute cooldown.
 
-Chat retrieval uses semantic similarity when configured and falls back to the existing keyword search on embedding failures. Unapproved knowledge is never retrieved. Vectors are kept on the external M.2 SSD in `data/amayune.db`.
+Approved knowledge and user prompts are sent to Cloud.ru for embedding, which may incur charges. Vectors stay in the portable `data/amayune.db` file on the external M.2 SSD. Unapproved knowledge is never indexed or retrieved.
 
-**Current implementation uses exact cosine search over vectors stored in SQLite, not the sqlite-vec native extension.** This is suitable for a modest personal knowledge base, not large-scale approximate nearest-neighbor search. Indexing is manual, and changing the model requires re-indexing. The embedding endpoint and model availability must be verified against the Cloud.ru account.
+**Implementation:** exact cosine search over SQLite vectors, not the native `sqlite-vec` extension. It is appropriate for a modest personal knowledge base. It does not train the model's weights.
