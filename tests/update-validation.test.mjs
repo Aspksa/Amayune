@@ -28,7 +28,8 @@ test('staged files must match hash and reject linked directories',()=>{
   const files=[{path:'web/app.js',sha256:hash('hello')}];
   assert.equal(inspectStagedFiles(root,files).length,1);
   assert.throws(()=>inspectStagedFiles(root,[{...files[0],sha256:hash('bad')}]),/Hash mismatch/);
-  symlinkSync(join(root,'web'),join(root,'linked'),'dir');
-  assert.throws(()=>inspectStagedFiles(root,[{path:'linked/app.js',sha256:hash('hello')}]),/linked/);
+  try{symlinkSync(join(root,'web'),join(root,'linked'),'dir');
+   assert.throws(()=>inspectStagedFiles(root,[{path:'linked/app.js',sha256:hash('hello')}]),/linked/);
+  }catch(e){if(e.code!=='EPERM'&&e.code!=='EACCES')throw e;}
  }finally{rmSync(root,{recursive:true,force:true});}
 });
