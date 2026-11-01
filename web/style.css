@@ -74,3 +74,28 @@ main>header{max-width:1800px;margin-inline:auto}
 @media(min-width:821px){main{min-width:0}.fields>*{min-width:0}.model-card{min-width:0}}
 @media(max-width:820px){aside{position:relative;height:auto;max-height:none}main{margin:0 auto;overflow-wrap:anywhere}.settings-subnav{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Update Center: responsive version overview, status and changelog */
+.update-version-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 0 22px}
+.update-version-card{min-width:0;display:flex;flex-direction:column;gap:10px;padding:22px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 8%,var(--card)),var(--card))}
+.update-version-card small{font-size:.7rem;letter-spacing:.09em;font-weight:750;color:var(--muted)}
+.update-version-card strong{font-size:clamp(1.2rem,2.1vw,1.9rem);overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.update-version-card span{font-size:.82rem;color:var(--muted)}
+.update-panel{min-width:0}.update-checks{display:flex;flex-wrap:wrap;gap:10px;margin:15px 0}
+.update-state{display:inline-flex;align-items:center;padding:7px 11px;border:1px solid var(--line);background:var(--surface);border-radius:99px;font-size:.82rem}
+.update-state[data-state="success"]{border-color:color-mix(in srgb,#35a875 45%,var(--line));color:#35a875}
+.update-state[data-state="failure"]{border-color:color-mix(in srgb,#d46a6a 45%,var(--line));color:#d46a6a}
+.update-auto{display:flex;align-items:center;gap:10px;margin:16px 0}
+.update-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:18px 0}
+.update-steps span{min-width:0;padding:10px 8px;text-align:center;border-radius:10px;background:var(--surface);border:1px solid var(--line);font-size:.78rem;color:var(--muted)}
+.update-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:18px 0}
+.update-actions button,.update-actions .file-button{min-height:44px;padding:11px 15px;border-radius:11px}
+.update-help{color:var(--muted)}.update-history-layout{display:grid;grid-template-columns:minmax(220px,1fr) minmax(0,1.4fr);gap:18px}
+.update-history-list{display:flex;flex-direction:column;gap:8px;max-height:440px;overflow:auto;min-width:0}
+.update-history-entry{display:flex;flex-direction:column;align-items:flex-start;gap:6px;width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);padding:13px;border-radius:12px;overflow-wrap:anywhere}
+.update-history-entry:hover,.update-history-entry[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+.update-history-entry small{color:var(--muted);font-size:.77rem}.update-changes-panel{min-width:0}
+.update-changes-panel h3{margin:0 0 14px}.update-changes-panel pre{max-height:430px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+#updateProgress{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+@media(max-width:850px){.update-history-layout{grid-template-columns:1fr}.update-history-list{max-height:290px}}
+@media(max-width:560px){.update-version-grid{grid-template-columns:1fr}.update-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.update-actions{flex-direction:column;align-items:stretch}.update-actions button,.update-actions .file-button{text-align:center;width:100%}.update-panel{padding:16px}}
