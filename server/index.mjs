@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {getBackupPolicy,saveBackupPolicy,tickBackup} from './backup-policy.mjs';
 import {listBackups,makeBackup,recoverBackup} from './backups.mjs';
 import {createBackup,restoreBackup,diagnostics} from './maintenance.mjs';
 import {listCloudModels} from './cloudru.mjs';
@@ -29,6 +30,8 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==='GET'&&url.pathname==='/style.css'){res.writeHead(200,{'content-type':'text/css; charset=utf-8'});return res.end(readFileSync(join(root,'web','style.css')));}
   if(!url.pathname.startsWith('/api/'))return reply(res,404,{error:'Не найдено'});
   if(!auth(req))return reply(res,403,{error:'Доступ запрещён'});
+  if(req.method==='GET'&&url.pathname==='/api/backup-policy')return reply(res,200,{policy:getBackupPolicy(root)});
+  if(req.method==='PUT'&&url.pathname==='/api/backup-policy')return reply(res,200,{policy:saveBackupPolicy(root,await body(req))});
   if(req.method==='GET'&&url.pathname==='/api/backups')return reply(res,200,{backups:listBackups(root)});
   if(req.method==='POST'&&url.pathname==='/api/backups')return reply(res,200,{backup:makeBackup(root)});
   if(req.method==='POST'&&url.pathname==='/api/backups/restore'){const {name}=await body(req);return reply(res,200,{restored:recoverBackup(root,name)});}
@@ -53,3 +56,6 @@ const server=http.createServer(async(req,res)=>{
  }catch(e){const code=e.status||(/Некоррект|Недопустим|Слишком большой|Неизвестн/.test(e.message)?400:503);return reply(res,code,{error:e.status?e.message:code===400?e.message:'Ошибка локального сервера или сети'});}
 });
 server.listen(port,host,()=>console.log('Amayune ready at http://'+host+':'+port));
+
+const backupTimer=setInterval(()=>{try{tickBackup(root);}catch{console.error('Scheduled backup failed (no secrets logged)');}},60000);
+backupTimer.unref();
