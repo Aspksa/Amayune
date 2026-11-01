@@ -84,7 +84,11 @@ async function launch(){
       else {try{process.kill(-child.pid);}catch{}}
       throw Error('Сервер не ответил на HTTP health-check: '+url);
     }
-    if(installing){finishPendingUpdate(root,true);log('update','Обновление подтверждено');}
+    if(installing){
+      await sleep(3000);
+      if(!isProcessAlive(child.pid)||!await identityMatches(port,healthPath,instanceId))throw Error('Обновлённый сервер не выдержал контрольный интервал');
+      finishPendingUpdate(root,true);log('update','Обновление подтверждено');
+    }
     writeFileSync(statePath,JSON.stringify({port,pid:child.pid,instanceId,at:new Date().toISOString()}));
     log('ready','HTTP готов: '+url);
     browser('http://127.0.0.1:'+port);
