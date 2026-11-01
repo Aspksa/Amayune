@@ -1,0 +1,11 @@
+/* Amayune Premium: shared non-destructive design layer */
+:root{--premium-bg:#09090c;--premium-panel:#15151b;--premium-card:#1b1b22;--premium-gold:#d9a441;--premium-text:#f4f0e7;--premium-muted:#aaa4a0;--premium-border:#39332a;--premium-radius:16px;--premium-focus:#f4c96b}
+body{background:var(--premium-bg);color:var(--premium-text);-webkit-font-smoothing:antialiased}
+button,input,textarea,select{accent-color:var(--premium-gold)}
+:where(button,a,input,textarea,select,summary):focus-visible{outline:2px solid var(--premium-focus)!important;outline-offset:3px}
+button{transition:background-color .18s ease,border-color .18s ease,transform .18s ease}
+button:active:not(:disabled){transform:translateY(1px)}
+button:disabled{cursor:not-allowed;opacity:.55}
+:where(.message,.preview,details,.history button){overflow-wrap:anywhere}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media(max-width:720px){button,input,textarea{min-height:40px}body{overscroll-behavior-y:contain}}
