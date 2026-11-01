@@ -25,7 +25,7 @@ export function restoreUpdate(root,backup){
  }
  return true;
 }
-export function applyUpdate(manifestFile,root=defaultRoot){
+export function applyUpdate(manifestFile,root=defaultRoot,onPrepared=()=>{}){
  const stage=join(root,'.runtime','updates','staged');
  const manifest=JSON.parse(readFileSync(manifestFile,'utf8'));
  const files=validateSignedManifest(manifest,process.env.AMAYUNE_UPDATE_PUBLIC_KEY);
@@ -42,7 +42,8 @@ export function applyUpdate(manifestFile,root=defaultRoot){
  mkdirSync(join(backup,'files'),{recursive:true});
  for(const c of changes){if(c.existed){const old=join(backup,'files',c.path);mkdirSync(dirname(old),{recursive:true});copyFileSync(c.dst,old);}}
  atomicJson(join(backup,'journal.json'),{root,entries:changes.map(({path,existed})=>({path,existed}))});
- // Journal and all originals are durable before the first replacement.
+ // Persist the recovery pointer before the first replacement.
+ onPrepared(backup);
  try{for(const c of changes){mkdirSync(dirname(c.dst),{recursive:true});copyFileSync(c.src,c.dst);}}
  catch(error){try{restoreUpdate(root,backup);}catch(rollback){throw new AggregateError([error,rollback],'Update and rollback failed');}throw error;}
  return backup;
