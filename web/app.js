@@ -196,38 +196,54 @@ document.getElementById('generationSend').onclick=async()=>{
 refreshCloudUsage();
 
 // Update Center: signed release delivery and GitHub history.
+function updateUiState(message,state='info'){
+ const el=document.getElementById('updateStatus');
+ el.textContent=message;el.dataset.state=state;
+}
+function updateStep(step,state='active'){
+ document.querySelectorAll('.update-steps span').forEach((item,index)=>{
+  item.dataset.state=index+1<step?'complete':index+1===step?state:'idle';
+ });
+}
+function setUpdateProgress(state,label){
+ const container=document.getElementById('updateProgress');
+ container.hidden=false;container.dataset.state=state;
+ document.getElementById('updateProgressText').textContent=label;
+ const bar=document.getElementById('updateProgressBar');
+ if(state==='loading')bar.removeAttribute('value');
+ else bar.value=state==='success'?100:0;
+ container.setAttribute('aria-valuetext',label);
+}
 async function checkUpdates(){
  const el=document.getElementById('updateStatus');const button=document.getElementById('checkUpdates');
- button.disabled=true;el.textContent='Проверяю GitHub и результаты CI…';
+ button.disabled=true;updateUiState('Проверяю GitHub и результаты CI…');updateStep(1);
  try{const {update:u}=await request('update/check');
  document.getElementById('updateInstalledVersion').textContent=u.installed?u.installed.slice(0,12):'Не определена';
  document.getElementById('updateLatestVersion').textContent=u.sha.slice(0,12);
- document.getElementById('updateLastChecked').textContent='Проверено: '+new Date(u.checkedAt).toLocaleString('ru-RU');
+ document.getElementById('updateLastChecked').textContent='Проверено: '+new Date().toLocaleString('ru-RU');
  const ciBadge=document.getElementById('updateCiBadge');ciBadge.textContent='CI: '+({success:'успешно',pending:'выполняется',failure:'ошибка',none:'нет данных'}[u.ci]||'неизвестно');ciBadge.dataset.state=u.ci;
- const signature=document.getElementById('updateSignatureBadge');signature.textContent=u.canInstall?'Подпись: ключ настроен':'Подпись: требуется доверенный ключ';signature.dataset.state=u.canInstall?'success':'';
+ const signature=document.getElementById('updateSignatureBadge');signature.textContent=u.canInstall?'Ключ доверия настроен · пакет не проверен':'Подпись пакета не проверена';signature.dataset.state='';
  const state={success:'проверки пройдены',pending:'проверки выполняются',failure:'проверки не пройдены',none:'проверок нет'}[u.ci]||'неизвестно';
- el.textContent='GitHub: '+u.sha.slice(0,12)+' · CI: '+state+' · '+(u.installed?'Установлена: '+u.installed.slice(0,12):'Установленная версия не определена')+' · '+(u.updateAvailable?'Есть изменения':'Актуальная версия')+'. Для установки требуется подписанный пакет.';
- }catch(e){el.textContent='Ошибка проверки обновлений: '+e.message;}finally{button.disabled=false;}
+ updateUiState('GitHub: '+u.sha.slice(0,12)+' · CI: '+state+' · '+(u.installed?'Установлена: '+u.installed.slice(0,12):'Установленная версия не определена')+' · '+(u.updateAvailable?'Есть изменения':'Актуальная версия')+'. Для установки требуется подписанный пакет.',u.ci==='failure'?'failure':'info');
+ }catch(e){updateUiState('Ошибка проверки обновлений: '+e.message,'failure');updateStep(1,'failure');}finally{button.disabled=false;}
 }
 document.getElementById('checkUpdates').addEventListener('click',checkUpdates);
 
 let verifiedUpdate=null;
 document.getElementById('stageUpdate').addEventListener('click',async()=>{
  const status=document.getElementById('updateStatus'),file=document.getElementById('updateManifest').files[0];
- if(!file)return status.textContent='Сначала выберите подписанный manifest.json';
- if(file.size>1_000_000)return status.textContent='Манифест слишком большой';
- const button=document.getElementById('stageUpdate');button.disabled=true;
+ if(!file)return updateUiState('Сначала выберите подписанный manifest.json','failure');
+ if(file.size>1_000_000)return updateUiState('Манифест слишком большой','failure');
+ const button=document.getElementById('stageUpdate');button.disabled=true;verifiedUpdate=null;document.getElementById('updateSignatureBadge').dataset.state='';
  try{
   const {update}=await request('update/check');
   if(update.ci!=='success')throw Error('CI выбранной версии не пройден');
   const manifest=JSON.parse(await file.text());
-  setUpdateProgress(true,'Загрузка и проверка файлов…');
-  status.textContent='Загружаю и проверяю файлы…';
+  updateStep(2);setUpdateProgress('loading','Загрузка и проверка файлов…');updateUiState('Загружаю и проверяю файлы…');
   const result=await request('update/stage','POST',{sha:update.sha,manifest});
-  verifiedUpdate=update.sha;
-  status.textContent='Подготовлено файлов: '+result.staged.files+'; версия '+update.sha.slice(0,12)+'. Можно назначить установку.';
- }catch(e){status.textContent='Подготовка не удалась: '+e.message;}
- finally{button.disabled=false;setUpdateProgress(false,'Подготовка завершена');}
+  verifiedUpdate=update.sha;updateStep(3,'complete');setUpdateProgress('success','Пакет подготовлен и проверен');const badge=document.getElementById('updateSignatureBadge');badge.textContent='Подпись пакета проверена';badge.dataset.state='success';updateUiState('Подготовлено файлов: '+result.staged.files+'; версия '+update.sha.slice(0,12)+'. Можно назначить установку.','success');
+ }catch(e){updateUiState('Подготовка не удалась: '+e.message,'failure');setUpdateProgress('failure','Подготовка завершилась ошибкой');updateStep(2,'failure');}
+ finally{button.disabled=false;}
 });
 document.getElementById('installUpdate').addEventListener('click',async()=>{
  const status=document.getElementById('updateStatus'),button=document.getElementById('installUpdate');
@@ -235,21 +251,13 @@ document.getElementById('installUpdate').addEventListener('click',async()=>{
  try{
   const {update}=await request('update/check');
   if(update.ci!=='success')throw Error('CI не пройден');
+  if(verifiedUpdate!==update.sha)throw Error('Сначала подготовьте и проверьте подписанный пакет выбранной версии');
   const result=await request('update/install','POST',{sha:update.sha});
-  status.textContent='Установка версии '+result.installation.sha.slice(0,12)+' назначена. Закройте Amayune и запустите его снова через Amayune.bat.';
- }catch(e){status.textContent='Установка не назначена: '+e.message;}
+  updateStep(4,'complete');updateUiState('Установка версии '+result.installation.sha.slice(0,12)+' назначена. Закройте Amayune и запустите его снова через Amayune.bat.','success');
+ }catch(e){updateUiState('Установка не назначена: '+e.message,'failure');updateStep(4,'failure');}
  finally{button.disabled=false;}
 });
 
-function setUpdateProgress(active,label){
- const container=document.getElementById('updateProgress');
- container.hidden=!active;
- document.getElementById('updateProgressText').textContent=label;
- const bar=document.getElementById('updateProgressBar');
- if(active)bar.removeAttribute('value');else bar.value=0;
- container.setAttribute('aria-valuetext',label);
- container.removeAttribute('aria-valuenow');
-}
 async function loadUpdateHistory(){
  const box=document.getElementById('updateHistoryList');
  box.textContent='Загружаю историю…';
@@ -266,7 +274,7 @@ async function loadUpdateHistory(){
     const output=document.getElementById('updateChangeList');output.textContent='Загружаю список изменений…';
     try{
      const {changes}=await request('update/changes?sha='+encodeURIComponent(entry.sha));
-     output.textContent=changes.message+'\\n\\n'+changes.files.map(f=>({added:'Добавлен',modified:'Изменён',removed:'Удалён',renamed:'Переименован'}[f.status]||f.status)+' · '+f.path+' (+'+f.additions+' / -'+f.deletions+')').join('\\n');
+     output.textContent=changes.message+'\n\n'+changes.files.map(f=>({added:'Добавлен',modified:'Изменён',removed:'Удалён',renamed:'Переименован'}[f.status]||f.status)+' · '+f.path+' (+'+f.additions+' / -'+f.deletions+')').join('\n');
     }catch(e){output.textContent='Ошибка: '+e.message;}
    };
    return button;
