@@ -2,6 +2,7 @@ import http from 'node:http';
 import {generate,getUsage} from './inference.mjs';
 import {checkGitHubUpdate} from './github-updates.mjs';
 import {stageSignedRelease} from '../scripts/stage-release.mjs';
+import {requestInstallation,updateStatus} from '../scripts/update-lifecycle.mjs';
 import {getBackupPolicy,saveBackupPolicy,tickBackup} from './backup-policy.mjs';
 import {listBackups,makeBackup,recoverBackup} from './backups.mjs';
 import {createBackup,restoreBackup,diagnostics} from './maintenance.mjs';
@@ -33,7 +34,14 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==='GET'&&url.pathname==='/style.css'){res.writeHead(200,{'content-type':'text/css; charset=utf-8'});return res.end(readFileSync(join(root,'web','style.css')));}
   if(!url.pathname.startsWith('/api/'))return reply(res,404,{error:'Не найдено'});
   if(!auth(req))return reply(res,403,{error:'Доступ запрещён'});
-  if(req.method==='GET'&&url.pathname==='/api/update/check')return reply(res,200,{update:await checkGitHubUpdate(root)});
+  if(req.method==='GET'&&url.pathname==='/api/update/check')return reply(res,200,{update:await checkGitHubUpdate(root),installation:updateStatus(root)});
+  if(req.method==='POST'&&url.pathname==='/api/update/install'){
+   const {sha}=await body(req);
+   const current=await checkGitHubUpdate(root);
+   if(current.sha!==sha||current.ci!=='success')return reply(res,409,{error:'Версия или статус CI изменились'});
+   if(!process.env.AMAYUNE_UPDATE_PUBLIC_KEY)return reply(res,409,{error:'Не настроен доверенный ключ подписи'});
+   return reply(res,200,{installation:requestInstallation(root,sha,process.env.AMAYUNE_UPDATE_PUBLIC_KEY)});
+  }
   if(req.method==='POST'&&url.pathname==='/api/update/stage'){
    const {sha,manifest}=await body(req);
    const update=await checkGitHubUpdate(root);
