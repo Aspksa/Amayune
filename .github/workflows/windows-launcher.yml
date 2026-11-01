@@ -21,7 +21,7 @@ jobs:
       - name: Test expected failure with missing app config
         shell: pwsh
         run: |
-          $output = cmd.exe /d /c 'echo.|Project.bat' 2>&1
+          $output = cmd.exe /d /c 'echo.|Amayune.bat' 2>&1
           $output | Out-Host
           if ($LASTEXITCODE -eq 0) { throw 'Expected a nonzero exit when application is missing.' }
       - name: Test Cyrillic and spaced working directory
@@ -29,9 +29,9 @@ jobs:
         run: |
           $target = Join-Path $env:RUNNER_TEMP 'Тест проект с пробелами'
           New-Item -ItemType Directory -Force -Path $target | Out-Null
-          Copy-Item Project.bat -Destination $target
+          Copy-Item Amayune.bat -Destination $target
           Copy-Item Amayune.bat -Destination $target
           Copy-Item scripts -Recurse -Destination $target
-          $output = cmd.exe /d /c ('echo.|"' + (Join-Path $target 'Project.bat') + '"') 2>&1
+          $output = cmd.exe /d /c ('echo.|"' + (Join-Path $target 'Amayune.bat') + '"') 2>&1
           $output | Out-Host
           if ($LASTEXITCODE -eq 0) { throw 'Expected missing config failure.' }
