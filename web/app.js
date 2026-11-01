@@ -33,7 +33,7 @@ function render(){const scheme=settings.theme==='system'?(matchMedia('(prefers-c
  document.querySelectorAll('.primary').forEach(b=>b.style.color=contrast(accent)>.4?'#080808':'#FFFFFF');
  document.querySelectorAll('[data-theme-tile]').forEach(tile=>tile.setAttribute('aria-pressed',String(settings.theme===tile.dataset.themeTile)));
 }
-function notify(s){document.getElementById('status').textContent=s;}
+function notify(s){if(s==='Сохранено'&&localStorage.getItem('amayune.pref.notices')==='0')return;document.getElementById('status').textContent=s;}
 function cloudMessage(s){document.getElementById('cloudStatus').textContent=s;const badge=document.getElementById('cloudConnectionBadge');if(badge)badge.textContent=s.startsWith('Соединение подтверждено')||s.startsWith('Ключ проверен')?'Подключено':s.startsWith('Проверяю')?'Проверка…':s.startsWith('Ключ сохранён')?'Ключ сохранён':s.startsWith('Проверка не пройдена')||s.startsWith('Авторизация')?'Ошибка проверки':'Не подключено';}
 function save(){notify('Сохранение…');try{localStorage.setItem('amayune.appearance.v1',JSON.stringify(settings));notify('Сохранено');}catch{notify('Ошибка сохранения оформления');}}
 document.querySelectorAll('[data-setting]').forEach(el=>el.addEventListener('input',()=>{settings=clean({...settings,[el.dataset.setting]:el.type==='checkbox'?el.checked:el.value});render();save();}));
@@ -64,13 +64,13 @@ document.getElementById('showKey').onchange=e=>document.getElementById('apiKey')
 document.getElementById('saveKey').onclick=async()=>{const el=document.getElementById('apiKey');try{await request('key','PUT',{key:el.value});el.value='';el.type='password';document.getElementById('showKey').checked=false;cloudMessage('Ключ проверен Cloud.ru и безопасно сохранён');}catch(e){el.value='';cloudMessage(e.message);}};
 document.getElementById('deleteKey').onclick=async()=>{if(!confirm('Удалить сохранённый ключ Cloud.ru?'))return;try{await request('key','DELETE');cloudMessage('Ключ удалён');}catch(e){notify(e.message);}};
 document.getElementById('checkAll').onclick=async()=>{const box=document.getElementById('cloudStatus');cloudMessage('Проверяю доступ к списку моделей...');try{const data=await request('models');models=data.models;document.getElementById('models').replaceChildren(...models.map(m=>{const o=document.createElement('option');o.value=m.id;return o;}));const info=document.getElementById('modelInfo');info.replaceChildren(...models.slice(0,100).map(m=>{const p=document.createElement('p');p.textContent=[m.name,'ID: '+m.id,m.context===null?'':'Контекст: '+m.context,m.inputCost===null?'':'Вход: '+m.inputCost,m.outputCost===null?'':'Выход: '+m.outputCost].filter(Boolean).join(' · ');return p;}));cloudMessage('Соединение подтверждено · моделей: '+models.length+' · '+new Date(data.checkedAt).toLocaleString('ru-RU'));}catch(e){cloudMessage('Проверка не пройдена: '+e.message);}};
-function page(name){document.getElementById('appearance').hidden=name!=='appearance';document.getElementById('connection').hidden=name!=='connection';document.getElementById('maintenance').hidden=name!=='maintenance';document.querySelectorAll('[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===name));sessionStorage.setItem('amayune.page',name);document.getElementById('settingsSubnav').hidden=false;document.getElementById('settingsNav').setAttribute('aria-expanded','true');}
+function page(name){for(const id of ['appearance','interface','connection','security','performance','notifications','maintenance','about'])document.getElementById(id).hidden=id!==name;document.querySelectorAll('[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===name));sessionStorage.setItem('amayune.page',name);document.getElementById('settingsSubnav').hidden=false;document.getElementById('settingsNav').setAttribute('aria-expanded','true');}
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>page(b.dataset.page));
 document.getElementById('settingsNav').onclick=()=>{const sub=document.getElementById('settingsSubnav');sub.hidden=!sub.hidden;document.getElementById('settingsNav').setAttribute('aria-expanded',String(!sub.hidden));};
 const searchInput=document.getElementById('search');
 function searchSettings(q){
  const term=q.trim().toLocaleLowerCase('ru');
- const sections=['appearance','connection','maintenance'];
+ const sections=['appearance','interface','connection','security','performance','notifications','maintenance','about'];
  let target=null,first=null;
  for(const id of sections){
   const section=document.getElementById(id);
@@ -101,7 +101,7 @@ for(const [name,color] of accents){const b=document.createElement('button');b.ty
 const originalRender=render;
 render=function(){originalRender();for(const b of palette.children){b.setAttribute('aria-pressed',String(settings.accent===rgbToHex(b.style.backgroundColor)));}};
 function rgbToHex(rgb){const m=rgb.match(/\d+/g);return m&&m.length>=3?'#'+m.slice(0,3).map(v=>Number(v).toString(16).padStart(2,'0')).join('').toUpperCase():rgb.toUpperCase();}
-page(['appearance','connection','maintenance'].includes(sessionStorage.getItem('amayune.page'))?sessionStorage.getItem('amayune.page'):'appearance');render();loadCloud();
+page(['appearance','interface','connection','security','performance','notifications','maintenance','about'].includes(sessionStorage.getItem('amayune.page'))?sessionStorage.getItem('amayune.page'):'appearance');render();loadCloud();
 
 let diagnosticReport=null;
 document.getElementById('diagnose').onclick=async()=>{
@@ -120,3 +120,27 @@ document.getElementById('backupImport').onchange=async e=>{
  try{if(file.size>100000)throw Error('Файл слишком большой');const content=JSON.parse(await file.text());if(!confirm('Восстановить параметры из резервной копии?'))return;const result=await request('restore','POST',content);if(result.restored.appearance){settings=clean(result.restored.appearance);render();save();}cloud=result.restored.cloud;cloudFields();document.getElementById('backupStatus').textContent='Настройки восстановлены';}
  catch(err){document.getElementById('backupStatus').textContent='Не удалось восстановить: '+err.message;}finally{e.target.value='';}
 };
+
+const prefCollapsed=document.getElementById('prefCollapsed');
+const prefSidebarWidth=document.getElementById('prefSidebarWidth');
+const prefReducedMotion=document.getElementById('prefReducedMotion');
+const prefSaveNotices=document.getElementById('prefSaveNotices');
+function syncPreferences(){prefCollapsed.checked=document.body.classList.contains('sidebar-collapsed');prefSidebarWidth.value=String(settings.sidebar);document.getElementById('sidebarWidthValue').textContent=settings.sidebar+' px';prefReducedMotion.checked=settings.reduceMotion;prefSaveNotices.checked=localStorage.getItem('amayune.pref.notices')!=='0';}
+prefCollapsed.onchange=e=>{setSidebar(e.target.checked);syncPreferences();};
+prefSidebarWidth.oninput=e=>{settings=clean({...settings,sidebar:Number(e.target.value)});render();save();syncPreferences();};
+prefReducedMotion.onchange=e=>{settings=clean({...settings,reduceMotion:e.target.checked});render();save();syncPreferences();};
+prefSaveNotices.onchange=e=>{localStorage.setItem('amayune.pref.notices',e.target.checked?'1':'0');notify('Настройка уведомлений изменена');};
+document.getElementById('focusSearch').onclick=()=>{setSidebar(false);searchInput.focus();};
+async function refreshSecurity(){
+ const box=document.getElementById('securityKeyStatus');
+ try{const [data,diag]=await Promise.all([request('settings'),request('diagnostics')]);box.textContent=data.hasKey?'Ключ сохранён · '+diag.diagnostics.keyProtection:'Ключ не сохранён · '+diag.diagnostics.keyProtection;}
+ catch(e){box.textContent='Ошибка проверки: '+e.message;}
+}
+document.getElementById('securityRefresh').onclick=refreshSecurity;
+document.getElementById('securityDeleteKey').onclick=async()=>{if(!confirm('Безвозвратно удалить API-ключ Cloud.ru?'))return;try{await request('key','DELETE');cloudMessage('Ключ удалён');await refreshSecurity();}catch(e){notify('Ошибка удаления: '+e.message);}};
+document.getElementById('clearLocalAppearance').onclick=()=>{if(!confirm('Сбросить оформление в этом браузере?'))return;settings=clean();render();save();syncPreferences();};
+document.getElementById('openCloudParameters').onclick=()=>{page('connection');document.querySelectorAll('#connection details').forEach(d=>{if(d.querySelector('summary')?.textContent.includes('Параметры'))d.open=true;});};
+document.getElementById('refreshAbout').onclick=async()=>{const el=document.getElementById('aboutEnvironment');try{const r=await request('diagnostics');el.textContent=JSON.stringify({Node:r.diagnostics.node,platform:r.diagnostics.platform,uptimeSeconds:r.diagnostics.uptimeSeconds},null,2);}catch(e){el.textContent=e.message;}};
+const oldPage=page;
+page=function(name){oldPage(name);if(name==='interface'||name==='notifications'||name==='performance')syncPreferences();if(name==='security')refreshSecurity();if(name==='about')document.getElementById('refreshAbout').click();if(name==='performance'){document.getElementById('performanceValues').textContent=cloud?'Максимум токенов: '+cloud.maxTokens+' · Параллельных запросов: '+cloud.concurrency+' · Тайм-аут: '+cloud.timeoutMs+' мс':'Параметры Cloud.ru не загружены';}};
+syncPreferences();
