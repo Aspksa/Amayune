@@ -35,16 +35,8 @@ async function launch(){
   if(!/^[A-Za-z0-9:_-]+$/.test(config.start?.script??''))throw Error('Некорректный start.script');
   const healthPath=config.health?.path??'/health';
   if(!/^\/[A-Za-z0-9/_?.=-]*$/.test(healthPath))throw Error('Некорректный health.path');
-  const update=updateStatus(root);
-  if(update.state==='invalid')throw Error('Повреждён статус обновления; требуется ручная проверка');
   const existing=getState(root);
-  if(update.state==='ready'&&existing?.pid&&isProcessAlive(existing.pid))throw Error('Закройте работающий Amayune перед установкой обновления');
-  if(update.state==='booting'){
-    log('update','Предыдущий запуск не подтвердил обновление; выполняю откат');
-    finishPendingUpdate(root,false);
-  }
-  const installing=update.state==='ready';
-  if(existing?.port>0&&existing.port<65536&&Number.isInteger(existing.pid)&&existing.pid>0&&isProcessAlive(existing.pid)&&await identityMatches(existing.port,healthPath,existing.instanceId)){
+  if(updateStatus(root).state==='idle'&&existing?.port>0&&existing.port<65536&&Number.isInteger(existing.pid)&&existing.pid>0&&isProcessAlive(existing.pid)&&await identityMatches(existing.port,healthPath,existing.instanceId)){
     log('reuse','Сервер уже работает на '+existing.port);
     browser('http://127.0.0.1:'+existing.port);return;
   }
@@ -63,7 +55,16 @@ async function launch(){
     }
     throw Error('Параллельный запуск занят. Повторите позже.');
   }
+  let installing=false;
   try{
+    const update=updateStatus(root);
+    if(update.state==='invalid')throw Error('Повреждён статус обновления; требуется ручная проверка');
+    if(update.state==='booting'){
+      log('update','Предыдущий запуск не подтвердил обновление; выполняю откат');
+      finishPendingUpdate(root,false);
+    }
+    installing=update.state==='ready';
+    if(installing&&existing?.pid&&isProcessAlive(existing.pid))throw Error('Закройте работающий Amayune перед установкой обновления');
     if(config.python?.required){
       const result=spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',join(root,'scripts','bootstrap-python.ps1'),'-Root',root],{stdio:'inherit'});
       if(result.status!==0)throw Error('Python недоступен.');
