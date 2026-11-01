@@ -6,3 +6,5 @@
 .amayune-avatar.dragging{cursor:grabbing;transition:none;transform:none}
 .amayune-avatar-panel:not([hidden]){position:absolute;left:0;bottom:calc(100% + 12px);pointer-events:auto;max-height:min(75dvh,500px);overflow:auto}
 @media(max-width:760px){.amayune-avatar-dock{right:auto;bottom:auto}.amayune-avatar-panel:not([hidden]){left:auto;right:0}}
+
+.amayune-avatar-status{position:absolute;right:1px;bottom:1px;width:15px;height:15px;border-radius:50%;border:3px solid #17151a;background:#5ca87e;pointer-events:none;box-shadow:0 0 10px #0008}.amayune-avatar-status[data-state=thinking]{background:#e2af54;animation:amayune-pulse 1.5s ease-in-out infinite}.amayune-avatar-status[data-state=speaking]{background:#69b9e9;animation:amayune-pulse .9s ease-in-out infinite}.amayune-avatar-status[data-state=error]{background:#e27a76}.amayune-avatar[data-state=thinking]{box-shadow:0 0 0 4px #d9a44144,0 10px 35px #0009}@keyframes amayune-pulse{50%{opacity:.45;transform:scale(.8)}}@media(prefers-reduced-motion:reduce){.amayune-avatar-status{animation:none!important}}
