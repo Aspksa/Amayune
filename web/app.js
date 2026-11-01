@@ -204,3 +204,32 @@ document.getElementById('checkUpdates').addEventListener('click',async()=>{
  el.textContent='GitHub: '+u.sha.slice(0,12)+' · CI: '+state+' · '+(u.installed?'Установлена: '+u.installed.slice(0,12):'Установленная версия не определена')+' · '+(u.updateAvailable?'Есть изменения':'Актуальная версия')+'. Для установки требуется подписанный пакет.';
  }catch(e){el.textContent='Ошибка проверки обновлений: '+e.message;}finally{button.disabled=false;}
 });
+
+let verifiedUpdate=null;
+document.getElementById('stageUpdate').addEventListener('click',async()=>{
+ const status=document.getElementById('updateStatus'),file=document.getElementById('updateManifest').files[0];
+ if(!file)return status.textContent='Сначала выберите подписанный manifest.json';
+ if(file.size>1_000_000)return status.textContent='Манифест слишком большой';
+ const button=document.getElementById('stageUpdate');button.disabled=true;
+ try{
+  const {update}=await request('update/check');
+  if(update.ci!=='success')throw Error('CI выбранной версии не пройден');
+  const manifest=JSON.parse(await file.text());
+  status.textContent='Загружаю и проверяю файлы…';
+  const result=await request('update/stage','POST',{sha:update.sha,manifest});
+  verifiedUpdate=update.sha;
+  status.textContent='Подготовлено файлов: '+result.staged.files+'; версия '+update.sha.slice(0,12)+'. Можно назначить установку.';
+ }catch(e){status.textContent='Подготовка не удалась: '+e.message;}
+ finally{button.disabled=false;}
+});
+document.getElementById('installUpdate').addEventListener('click',async()=>{
+ const status=document.getElementById('updateStatus'),button=document.getElementById('installUpdate');
+ button.disabled=true;
+ try{
+  const {update}=await request('update/check');
+  if(update.ci!=='success')throw Error('CI не пройден');
+  const result=await request('update/install','POST',{sha:update.sha});
+  status.textContent='Установка версии '+result.installation.sha.slice(0,12)+' назначена. Закройте Amayune и запустите его снова через Amayune.bat.';
+ }catch(e){status.textContent='Установка не назначена: '+e.message;}
+ finally{button.disabled=false;}
+});
