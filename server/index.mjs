@@ -26,7 +26,7 @@ import {createUnifiedServices} from './unified-services.mjs';
 import {embedCloud} from './embeddings.mjs';
 import {createAutoIndexer} from './auto-index.mjs';
 import {generate,getUsage,streamGenerate} from './inference.mjs';
-import {checkGitHubUpdate,updateHistory,updateChanges} from './github-updates.mjs';
+import {checkGitHubUpdate,fetchReleaseManifest,updateHistory,updateChanges} from './github-updates.mjs';
 import {stageSignedRelease} from '../scripts/stage-release.mjs';
 import {requestInstallation,updateStatus} from '../scripts/update-lifecycle.mjs';
 import {getBackupPolicy,saveBackupPolicy,tickBackup} from './backup-policy.mjs';
@@ -123,10 +123,11 @@ const server=http.createServer(async(req,res)=>{
    return reply(res,200,{installation:requestInstallation(root,sha,process.env.AMAYUNE_UPDATE_PUBLIC_KEY)});
   }
   if(req.method==='POST'&&url.pathname==='/api/update/stage'){
-   const {sha,manifest}=await body(req,1_000_000);
+   const {sha}=await body(req,10000);
    const update=await checkGitHubUpdate(root);
    if(update.sha!==sha||update.ci!=='success')return reply(res,409,{error:'Версия GitHub изменилась или CI не пройден'});
    if(!process.env.AMAYUNE_UPDATE_PUBLIC_KEY)return reply(res,409,{error:'Ключ проверки подписи обновлений не настроен'});
+   const manifest=await fetchReleaseManifest(sha);
    return reply(res,200,{staged:await stageSignedRelease({root,sha,manifest,publicKey:process.env.AMAYUNE_UPDATE_PUBLIC_KEY})});
   }
   if(req.method==='GET'&&url.pathname==='/api/evolution/status')return reply(res,200,{current:livingEvolution().current(),versions:livingEvolution().versions(),turns:livingEvolution().turns()});
