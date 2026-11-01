@@ -21,7 +21,7 @@ export function extractCandidates(messages){
  for(const m of messages||[]){if(m.role!=='user'||typeof m.text!=='string')continue;
   for(const sentence of m.text.split(/[.!?\n]+/).map(s=>s.trim()).filter(Boolean)){
    if(sentence.length<12||sentence.length>300)continue;
-   if(/(?:^|\\s)(?:я предпочитаю|я использую|мой проект|моя цель|i prefer|i use|my project|my goal)(?=\\s|$)/i.test(sentence))candidates.push({content:sentence,source:'chat',verified:false});
+   if(/(?:^|\s)(?:я предпочитаю|я использую|мой проект|моя цель|i prefer|i use|my project|my goal)(?=\s|$)/i.test(sentence))candidates.push({content:sentence,source:'chat',verified:false});
   }
  }
  return [...new Map(candidates.map(x=>[x.content.toLowerCase(),x])).values()].slice(0,30);
