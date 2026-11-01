@@ -19,6 +19,7 @@ import {createEvolutionAudit} from './evolution-audit.mjs';
 import {createGenesisCore} from './genesis-core.mjs';
 import {episodeGuidance} from './genesis-presence.mjs';
 import {createLivingIntelligence} from './living-intelligence.mjs';
+import {createRuntimeSupervisor} from './runtime-supervisor.mjs';
 import {embedCloud} from './embeddings.mjs';
 import {createAutoIndexer} from './auto-index.mjs';
 import {generate,getUsage,streamGenerate} from './inference.mjs';
@@ -58,6 +59,7 @@ const growthCycle=createGrowthCycle(root,{getTurns:()=>livingEvolution().turns()
 const evolutionAudit=createEvolutionAudit(root,{getEntries:()=>learning().entries(),getTurns:()=>livingEvolution().turns()});evolutionAudit.start();
 const genesis=createGenesisCore(root,{getEntries:()=>learning().entries(),getTurns:()=>livingEvolution().turns()});genesis.start();
 const intelligence=createLivingIntelligence(root,{getTurns:()=>livingEvolution().turns(),getEntries:()=>learning().entries(),getEvents:()=>core().events()});intelligence.start();
+const runtimeSupervisor=createRuntimeSupervisor([{name:'evolution-worker',start:()=>evolutionWorker.start()},{name:'growth-cycle',start:()=>growthCycle.start()},{name:'evolution-audit',start:()=>evolutionAudit.start()},{name:'genesis',start:()=>genesis.start()},{name:'living-intelligence',start:()=>intelligence.start()}],{onFailure:(name,error)=>intelligence.recordFailure(name,error)});runtimeSupervisor.start();
 const mindSources=()=>({soul:soul(),evolution:evolution(),growth:growth(),living:living(),mind:mind()});
 const autoIndex=createAutoIndexer({memory,readKey});
 const scheduler=createScheduler();scheduler.enqueue('semantic-index',()=>autoIndex.schedule());
