@@ -1,0 +1,25 @@
+name: Settings validation
+on:
+  pull_request:
+  push:
+    branches: [main, feature/settings-cloudru]
+  workflow_dispatch:
+jobs:
+  settings:
+    strategy:
+      matrix:
+        os: [windows-2022, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check syntax
+        shell: bash
+        run: |
+          node --check server/index.mjs
+          node --check server/settings.mjs
+          node --check web/app.js
+      - name: Run tests
+        run: npm test
