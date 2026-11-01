@@ -33,7 +33,7 @@ function render(){const scheme=settings.theme==='system'?(matchMedia('(prefers-c
  document.querySelectorAll('.primary').forEach(b=>b.style.color=contrast(accent)>.4?'#080808':'#FFFFFF');
  document.querySelectorAll('[data-theme-tile]').forEach(tile=>tile.setAttribute('aria-pressed',String(settings.theme===tile.dataset.themeTile)));
 }
-function notify(s){if(s==='Сохранено'&&localStorage.getItem('amayune.pref.notices')==='0')return;document.getElementById('status').textContent=s;}
+function notify(s){let quiet=false;try{quiet=s==='Сохранено'&&localStorage.getItem('amayune.pref.notices')==='0';}catch{}if(quiet)return;const target=document.getElementById('status');target.textContent=s;target.dataset.state=/ошиб|не удалось|не сохран|отклон/i.test(s)?'error':/сохран|готов|скопир|восстанов/i.test(s)?'success':'info';}
 function cloudMessage(s){document.getElementById('cloudStatus').textContent=s;const badge=document.getElementById('cloudConnectionBadge');if(badge)badge.textContent=s.startsWith('Соединение подтверждено')||s.startsWith('Ключ проверен')?'Подключено':s.startsWith('Проверяю')?'Проверка…':s.startsWith('Ключ сохранён')?'Ключ сохранён':s.startsWith('Проверка не пройдена')||s.startsWith('Авторизация')?'Ошибка проверки':'Не подключено';}
 function save(){notify('Сохранение…');try{localStorage.setItem('amayune.appearance.v1',JSON.stringify(settings));notify('Сохранено');}catch{notify('Ошибка сохранения оформления');}}
 document.querySelectorAll('[data-setting]').forEach(el=>el.addEventListener('input',()=>{settings=clean({...settings,[el.dataset.setting]:el.type==='checkbox'?el.checked:el.value});render();save();}));
@@ -82,10 +82,11 @@ document.getElementById('verifySelection').onclick=async()=>{
   output.textContent=missing.length?'Не найдены в каталоге: '+missing.map(([label,id])=>label+' ('+id+')').join(', '):chosen.length?'Все выбранные модели доступны в каталоге':'Каталог доступен, модели пока не выбраны';
  }catch(e){output.textContent='Не удалось проверить каталог: '+e.message;}
 };
-function page(name){for(const id of ['appearance','interface','connection','security','performance','notifications','maintenance','about'])document.getElementById(id).hidden=id!==name;document.querySelectorAll('[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===name));sessionStorage.setItem('amayune.page',name);document.getElementById('settingsSubnav').hidden=false;document.getElementById('settingsNav').setAttribute('aria-expanded','true');}
+function page(name){for(const id of ['appearance','interface','connection','security','performance','notifications','maintenance','about'])document.getElementById(id).hidden=id!==name;document.querySelectorAll('[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===name));try{sessionStorage.setItem('amayune.page',name);}catch{}document.getElementById('settingsSubnav').hidden=false;document.getElementById('settingsNav').setAttribute('aria-expanded','true');}
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>page(b.dataset.page));
 document.getElementById('settingsNav').onclick=()=>{const sub=document.getElementById('settingsSubnav');sub.hidden=!sub.hidden;document.getElementById('settingsNav').setAttribute('aria-expanded',String(!sub.hidden));};
 const searchInput=document.getElementById('search');
+searchInput.setAttribute('aria-label','Поиск настроек');
 function searchSettings(q){
  const term=q.trim().toLocaleLowerCase('ru');
  const sections=['appearance','interface','connection','security','performance','notifications','maintenance','about'];
@@ -98,9 +99,10 @@ function searchSettings(q){
    if(matches&&term){d.open=true;if(!target){target=id;first=d;}}
   }
  }
- if(term&&target){page(target);first?.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}
+ if(term&&target){page(target);first?.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
  if(term&&!target)notify('Совпадений не найдено');
- if(!term)notify('Готово');
+ document.getElementById('searchEmpty').hidden=!(term&&!target);
+ if(!term){notify('Готово');document.querySelectorAll('[data-search-empty]').forEach(el=>el.hidden=true);}
 }
 searchInput.addEventListener('input',e=>searchSettings(e.target.value));
 document.addEventListener('keydown',e=>{
@@ -119,7 +121,7 @@ for(const [name,color] of accents){const b=document.createElement('button');b.ty
 const originalRender=render;
 render=function(){originalRender();for(const b of palette.children){b.setAttribute('aria-pressed',String(settings.accent===rgbToHex(b.style.backgroundColor)));}};
 function rgbToHex(rgb){const m=rgb.match(/\d+/g);return m&&m.length>=3?'#'+m.slice(0,3).map(v=>Number(v).toString(16).padStart(2,'0')).join('').toUpperCase():rgb.toUpperCase();}
-page(['appearance','interface','connection','security','performance','notifications','maintenance','about'].includes(sessionStorage.getItem('amayune.page'))?sessionStorage.getItem('amayune.page'):'appearance');render();loadCloud();
+let initialPage='appearance';try{const saved=sessionStorage.getItem('amayune.page');if(['appearance','interface','connection','security','performance','notifications','maintenance','about'].includes(saved))initialPage=saved;}catch{}page(initialPage);render();loadCloud();
 
 let diagnosticReport=null;
 document.getElementById('diagnose').onclick=async()=>{
