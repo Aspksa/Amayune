@@ -11,7 +11,7 @@ export function connectMemories(events=[],query=''){
 }
 export function reasonPlan(prompt=''){
  const p=clean(prompt,2000);
- const complex=/\b(план|сравни|почему|проанализируй|архитектур|debug|design|compare|plan)\b/iu.test(p)||p.length>450;
+ const complex=/(?:план|сравни|почему|проанализируй|архитектур|debug|design|compare|plan)/iu.test(p)||p.length>450;
  return complex?'Break complex tasks into verifiable steps; check assumptions and tradeoffs; distinguish facts from hypotheses.':'Respond naturally and directly, with relevant context and no filler.';
 }
 export function goalContext(entries=[]){
