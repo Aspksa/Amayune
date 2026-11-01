@@ -56,5 +56,42 @@ document.getElementById('checkAll').onclick=async()=>{const box=document.getElem
 function page(name){document.getElementById('appearance').hidden=name!=='appearance';document.getElementById('connection').hidden=name!=='connection';document.querySelectorAll('[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===name));sessionStorage.setItem('amayune.page',name);document.getElementById('settingsSubnav').hidden=false;document.getElementById('settingsNav').setAttribute('aria-expanded','true');}
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>page(b.dataset.page));
 document.getElementById('settingsNav').onclick=()=>{const sub=document.getElementById('settingsSubnav');sub.hidden=!sub.hidden;document.getElementById('settingsNav').setAttribute('aria-expanded',String(!sub.hidden));};
-document.getElementById('search').addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('details').forEach(d=>{const matches=d.textContent.toLowerCase().includes(q);d.hidden=!!q&&!matches;if(q&&matches)d.open=true;});});
+const searchInput=document.getElementById('search');
+function searchSettings(q){
+ const term=q.trim().toLocaleLowerCase('ru');
+ const pages=['appearance','connection'];
+ let first=null,matchingPage=null;
+ for(const pageId of pages){
+  const section=document.getElementById(pageId);
+  let count=0;
+  for(const d of section.querySelectorAll('details')){
+   const matches=!term||d.textContent.toLocaleLowerCase('ru').includes(term);
+   d.hidden=!matches;
+   if(matches){count++;if(term){d.open=true;first??=d;}}
+  }
+  if(term&&count&&!matchingPage)matchingPage=pageId;
+ }
+ if(term&&matchingPage){page(matchingPage);first?.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}
+ if(term&&!matchingPage)notify('Совпадений не найдено');
+}
+searchInput.addEventListener('input',e=>searchSettings(e.target.value));
+document.addEventListener('keydown',e=>{
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();document.body.classList.remove('sidebar-collapsed');searchInput.focus();searchInput.select();}
+ if(e.key==='Escape'&&document.activeElement===searchInput){searchInput.value='';searchSettings('');searchInput.blur();}
+});
+const sidebarToggle=document.getElementById('sidebarToggle');
+function setSidebar(collapsed){document.body.classList.toggle('sidebar-collapsed',collapsed);sidebarToggle.setAttribute('aria-pressed',String(collapsed));sidebarToggle.setAttribute('aria-label',collapsed?'Развернуть боковое меню':'Свернуть боковое меню');sidebarToggle.title=collapsed?'Развернуть меню':'Свернуть меню';try{localStorage.setItem('amayune.sidebar.collapsed',collapsed?'1':'0');}catch{}}
+sidebarToggle.onclick=()=>setSidebar(!document.body.classList.contains('sidebar-collapsed'));
+try{setSidebar(localStorage.getItem('amayune.sidebar.collapsed')==='1');}catch{setSidebar(false);}
+document.getElementById('quickAppearance').onclick=()=>page('appearance');
+document.getElementById('quickCloud').onclick=()=>page('connection');
+document.getElementById('quickReset').onclick=()=>{if(confirm('Сбросить оформление до стандартного?')){settings=clean();render();save();page('appearance');}};
+document.getElementById('expandGroups').onclick=()=>document.querySelectorAll('section:not([hidden]) details:not([hidden])').forEach(d=>d.open=true);
+document.getElementById('collapseGroups').onclick=()=>document.querySelectorAll('section:not([hidden]) details:not([hidden])').forEach(d=>d.open=false);
+const accents=[['Золото','#D9A441'],['Сакура','#EFA2BC'],['Нефрит','#56B68B'],['Фиалка','#9D86E8'],['Серебро','#BDC5D0'],['Сапфир','#5796DB'],['Рубин','#DF5868'],['Аметист','#B48AE8'],['Бирюза','#55C6C4']];
+const palette=document.getElementById('accentQuick');
+for(const [name,color] of accents){const b=document.createElement('button');b.type='button';b.className='accent-dot';b.style.backgroundColor=color;b.title=name;b.setAttribute('aria-label',name);b.onclick=()=>{settings=clean({...settings,accent:color});render();save();};palette.append(b);}
+const originalRender=render;
+render=function(){originalRender();for(const b of palette.children){b.setAttribute('aria-pressed',String(settings.accent===rgbToHex(b.style.backgroundColor)));}};
+function rgbToHex(rgb){const m=rgb.match(/\d+/g);return m&&m.length>=3?'#'+m.slice(0,3).map(v=>Number(v).toString(16).padStart(2,'0')).join('').toUpperCase():rgb.toUpperCase();}
 page(sessionStorage.getItem('amayune.page')==='connection'?'connection':'appearance');render();loadCloud();
