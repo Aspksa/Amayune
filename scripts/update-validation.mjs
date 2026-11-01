@@ -6,7 +6,7 @@ const sha256=b=>createHash('sha256').update(b).digest('hex');
 export function safeUpdatePath(p){
  if(typeof p!=='string'||!p||p.length>240||p.includes('\\')||p.startsWith('/')||p.includes(':')||p.includes('\0'))return false;
  const parts=p.split('/');
- return parts.every(s=>s&&s!=='.'&&s!=='..'&&!/[. ]$/.test(s)&&!/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(s))&&!blocked.has(parts[0].toLowerCase())&&!/\.(db|sqlite|sqlite3|key|pem)$/i.test(p);
+ return parts.every(s=>s&&s!=='.'&&s!=='..'&&!/[. ]$/.test(s)&&!/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i.test(s))&&!blocked.has(parts[0].toLowerCase())&&!/\.(db|sqlite|sqlite3|key|pem)$/i.test(p);
 }
 export function validateSignedManifest(manifest,publicKey){
  if(!manifest||manifest.signatureAlgorithm!=='ed25519'||typeof manifest.signature!=='string'||!Array.isArray(manifest.files)||manifest.files.length===0||manifest.files.length>5000)throw Error('Invalid signed manifest');
