@@ -2,6 +2,7 @@ import http from 'node:http';
 import {analyzeTask,buildContext,extractCandidates,summarizeHistory,checkAnswer,evaluateSamples,createScheduler,routeModel} from './intelligence.mjs';
 import {openMemory} from './memory.mjs';
 import {createSoulStore,buildSoulContext} from './soul.mjs';
+import {createEvolutionStore,evolutionContext} from './soul-evolution.mjs';
 import {embedCloud} from './embeddings.mjs';
 import {createAutoIndexer} from './auto-index.mjs';
 import {generate,getUsage,streamGenerate} from './inference.mjs';
@@ -23,6 +24,8 @@ const token=randomBytes(32).toString('hex');
 let memoryPromise;const memory=()=>memoryPromise??=(openMemory(root).catch(e=>{memoryPromise=null;throw e}));
 let soulInstance;
 const soul=()=>soulInstance??=(createSoulStore(root));
+let evolutionInstance;
+const evolution=()=>evolutionInstance??=(createEvolutionStore(root));
 const autoIndex=createAutoIndexer({memory,readKey});
 const scheduler=createScheduler();scheduler.enqueue('semantic-index',()=>autoIndex.schedule());
 const api='https://foundation-models.api.cloud.ru/v1/models';
@@ -91,7 +94,7 @@ const server=http.createServer(async(req,res)=>{
    const {prompt}=await body(req,18000);
    if(typeof prompt!=='string'||!prompt.trim()||prompt.length>16000)return reply(res,400,{error:'Некорректный запрос'});
    res.writeHead(200,{'content-type':'text/plain; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});
-   try{let facts=(await memory()).recall(prompt);void autoIndex.schedule();try{const semantic=await autoIndex.recall(prompt,key);facts=[...semantic,...facts.filter(f=>!semantic.some(v=>v.id===f.id))].slice(0,5)}catch{/* keyword fallback */}const store=await memory();const history=store.recentContext(prompt);const corrections=store.feedback(prompt);const summary=history.map(h=>h.title+': '+h.text).join(' | ')+'\n'+corrections.map(f=>'Исправление пользователя: '+f.correction).join(' | ');const enriched=buildContext({prompt,facts,summary});const soulContext=buildSoulContext({message:prompt,preferences:soul().preferences(),corrections:soul().corrections(),reflections:soul().reflections()});const combined=(soulContext+'\n\n'+enriched).slice(0,16000);await streamGenerate(root,key,combined,chunk=>{if(!res.destroyed)res.write(chunk)});}catch(e){if(!res.destroyed)res.write('\n[Ошибка потока: '+(e.status?'Cloud.ru HTTP '+e.status:'соединение прервано')+']');}
+   try{let facts=(await memory()).recall(prompt);void autoIndex.schedule();try{const semantic=await autoIndex.recall(prompt,key);facts=[...semantic,...facts.filter(f=>!semantic.some(v=>v.id===f.id))].slice(0,5)}catch{/* keyword fallback */}const store=await memory();const history=store.recentContext(prompt);const corrections=store.feedback(prompt);const summary=history.map(h=>h.title+': '+h.text).join(' | ')+'\n'+corrections.map(f=>'Исправление пользователя: '+f.correction).join(' | ');const enriched=buildContext({prompt,facts,summary});const soulContext=buildSoulContext({message:prompt,preferences:soul().preferences(),corrections:soul().corrections(),reflections:soul().reflections()});const evolving=evolution();const evolvingContext=evolutionContext({message:prompt,profile:evolving.profile(),experiences:evolving.experiences()});const combined=(soulContext+'\n\n'+evolvingContext+'\n\n'+enriched).slice(0,16000);await streamGenerate(root,key,combined,chunk=>{if(!res.destroyed)res.write(chunk)});}catch(e){if(!res.destroyed)res.write('\n[Ошибка потока: '+(e.status?'Cloud.ru HTTP '+e.status:'соединение прервано')+']');}
    if(!res.destroyed)res.end();return;
   }
   if(req.method==='GET'&&url.pathname==='/api/usage')return reply(res,200,{usage:getUsage(root),budgetTokens:loadSettings(root).budgetTokens});
