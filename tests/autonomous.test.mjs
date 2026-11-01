@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,mkdirSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {safePath,createToolEngine,createAgent,createAutonomousStore,selectModel,research,assess,retryDelay} from '../server/autonomous.mjs';
+test('agent executes bounded reason and review',async()=>{const a=createAgent({reason:async()=>({text:'done'}),review:async()=>({ok:true})});const r=await a.execute('Inspect project');assert.equal(r.status,'completed');assert.equal(r.trace.length,2)});
+test('tool engine restricts traversal and write access',async()=>{const root=mkdtempSync(join(tmpdir(),'amayune-tools-'));try{assert.throws(()=>safePath(root,'../outside'));await assert.rejects(()=>createToolEngine(root).run('write_file',{path:'new.txt',content:'hello'}));await assert.rejects(()=>createToolEngine(root).run('shell',{command:'echo'}));}finally{rmSync(root,{recursive:true,force:true})}});
+test('persistent job, graph and feedback survive reopen',()=>{const root=mkdtempSync(join(tmpdir(),'amayune-agent-'));mkdirSync(join(root,'data'));try{let s=createAutonomousStore(root);const id=s.submit('Inspect repository');s.log(id,'plan',{steps:2});const fact=s.fact('Amayune','language','TypeScript','user');assert.equal(s.related('Amayune').length,0);s.verifyFact(fact);s.feedback('language','Use TypeScript');s.close();s=createAutonomousStore(root);assert.equal(s.pending().length,1);assert.equal(s.events(id).length,1);assert.equal(s.related('Amayune').length,1);assert.equal(s.corrections().length,1);s.setState(id,'done');s.close()}finally{rmSync(root,{recursive:true,force:true})}});
+test('model routing, trusted research, checks and retry',async()=>{assert.equal(selectModel([{id:'a',cost:1,quality:2},{id:'b',cost:3,quality:9}],{complex:true}),'b');const r=await research('query',[{name:'local',search:async()=>[{title:'t',snippet:'s'}]}]);assert.equal(r.length,1);assert.equal(assess('').ok,false);assert.ok(retryDelay(10)<=3600000)});
