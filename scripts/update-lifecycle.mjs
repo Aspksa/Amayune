@@ -1,9 +1,11 @@
-import {existsSync,readFileSync,writeFileSync,mkdirSync,copyFileSync,rmSync} from 'node:fs';
+import {existsSync,readFileSync,writeFileSync,mkdirSync,rmSync,renameSync} from 'node:fs';
+import {randomUUID} from 'node:crypto';
 import {join} from 'node:path';
 import {applyUpdate,restoreUpdate} from './update.mjs';
 import {validateSignedManifest,inspectStagedFiles} from './update-validation.mjs';
 const directory=root=>join(root,'.runtime','updates');
 const pending=root=>join(directory(root),'pending.json');
+function atomicWrite(path,value){const tmp=path+'.'+randomUUID()+'.tmp';try{writeFileSync(tmp,JSON.stringify(value),{flag:'wx'});renameSync(tmp,path);}finally{rmSync(tmp,{force:true});}}
 export function updateStatus(root){
  const p=pending(root);
  if(!existsSync(p))return {state:'idle'};
@@ -29,10 +31,13 @@ export function applyPendingUpdate(root){
  const p=JSON.parse(readFileSync(file,'utf8'));
  if(p.state==='booting')throw Error('Previous update not confirmed; rollback required');
  if(p.state!=='ready')throw Error('Unknown update state');
- const manifest=join(directory(root),'staged','manifest.json');
+ const stage=join(directory(root),'staged');
+ const source=JSON.parse(readFileSync(join(stage,'source.json'),'utf8'));
+ if(source.sha!==p.sha)throw Error('Staged commit changed since queueing');
+ const manifest=join(stage,'manifest.json');
  const backup=applyUpdate(manifest,root,(prepared)=>{
   p.state='booting';p.backup=prepared;
-  writeFileSync(file,JSON.stringify(p));
+  atomicWrite(file,p);
  });
  return p;
 }
@@ -44,7 +49,7 @@ export function finishPendingUpdate(root,healthy){
  if(!healthy){
   restoreUpdate(root,p.backup);
  }else{
-  writeFileSync(join(directory(root),'installed.json'),JSON.stringify({sha:p.sha,at:new Date().toISOString()}));
+  atomicWrite(join(directory(root),'installed.json'),{sha:p.sha,at:new Date().toISOString()});
   rmSync(join(directory(root),'staged'),{recursive:true,force:true});
  }
  rmSync(file,{force:true});

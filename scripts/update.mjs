@@ -20,6 +20,7 @@ export function restoreUpdate(root,backup){
   noLinks(root,entry.path);
   if(entry.existed){
    if(!existsSync(old))throw Error('Missing backup: '+entry.path);
+   if(createHash('sha256').update(readFileSync(old)).digest('hex')!==entry.backupSha256)throw Error('Backup integrity mismatch: '+entry.path);
    mkdirSync(dirname(dst),{recursive:true});copyFileSync(old,dst);
   }else rmSync(dst,{force:true});
  }
@@ -40,11 +41,11 @@ export function applyUpdate(manifestFile,root=defaultRoot,onPrepared=()=>{}){
  });
  const backup=join(root,'.runtime','backups','update-'+randomUUID());
  mkdirSync(join(backup,'files'),{recursive:true});
- for(const c of changes){if(c.existed){const old=join(backup,'files',c.path);mkdirSync(dirname(old),{recursive:true});copyFileSync(c.dst,old);}}
- atomicJson(join(backup,'journal.json'),{root,entries:changes.map(({path,existed})=>({path,existed}))});
+ for(const c of changes){if(c.existed){const old=join(backup,'files',c.path);mkdirSync(dirname(old),{recursive:true});copyFileSync(c.dst,old);c.backupSha256=createHash('sha256').update(readFileSync(old)).digest('hex');}}
+ atomicJson(join(backup,'journal.json'),{root,entries:changes.map(({path,existed,backupSha256})=>({path,existed,backupSha256}))});
  // Persist the recovery pointer before the first replacement.
  onPrepared(backup);
- try{for(const c of changes){mkdirSync(dirname(c.dst),{recursive:true});copyFileSync(c.src,c.dst);}}
+ try{for(const c of changes){mkdirSync(dirname(c.dst),{recursive:true});const temp=c.dst+'.amayune-'+randomUUID()+'.tmp';try{copyFileSync(c.src,temp);renameSync(temp,c.dst);}finally{rmSync(temp,{force:true});}}}
  catch(error){try{restoreUpdate(root,backup);}catch(rollback){throw new AggregateError([error,rollback],'Update and rollback failed');}throw error;}
  return backup;
 }

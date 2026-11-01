@@ -11,9 +11,12 @@ export async function stageSignedRelease({root,sha,manifest,publicKey,fetcher=fe
  const stagingRoot=join(root,'.runtime','updates');
  const temporary=join(stagingRoot,'incoming-'+randomUUID());
  const target=join(stagingRoot,'staged');
+ const lock=join(stagingRoot,'stage.lock');
  let total=0;
- await mkdir(temporary,{recursive:true});
+ await mkdir(stagingRoot,{recursive:true});
+ await mkdir(lock);
  try{
+  await mkdir(temporary,{recursive:true});
   for(const entry of files){
    if(!safeUpdatePath(entry.path))throw Error('Unsafe path');
    const url=API+'/'+sha+'/'+entry.path.split('/').map(encodeURIComponent).join('/');
@@ -41,4 +44,5 @@ export async function stageSignedRelease({root,sha,manifest,publicKey,fetcher=fe
   await rename(temporary,target);
   return {files:files.length,bytes:total,sha};
  }catch(error){await rm(temporary,{recursive:true,force:true});throw error;}
+ finally{await rm(lock,{recursive:true,force:true});}
 }

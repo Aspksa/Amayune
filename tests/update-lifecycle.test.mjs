@@ -46,10 +46,24 @@ test('journal restores changed and newly created files after interrupted install
   writeFileSync(join(root,'web','app.js'),'updated');
   writeFileSync(join(root,'web','new.js'),'new');
   writeFileSync(join(backup,'files','web','app.js'),'original');
-  writeFileSync(join(backup,'journal.json'),JSON.stringify({root,entries:[{path:'web/app.js',existed:true},{path:'web/new.js',existed:false}]}));
+  writeFileSync(join(backup,'journal.json'),JSON.stringify({root,entries:[{path:'web/app.js',existed:true,backupSha256:createHash('sha256').update('original').digest('hex')},{path:'web/new.js',existed:false}]}));
   assert.equal(restoreUpdate(root,backup),true);
   assert.equal(readFileSync(join(root,'web','app.js'),'utf8'),'original');
   assert.equal(requireFileMissing(join(root,'web','new.js')),true);
  }finally{rmSync(root,{recursive:true,force:true});}
 });
 function requireFileMissing(path){try{readFileSync(path);return false;}catch(e){if(e.code==='ENOENT')return true;throw e;}}
+
+test('rollback refuses corrupted backup without overwriting current file',()=>{
+ const root=mkdtempSync(join(tmpdir(),'amayune-integrity-'));
+ try{
+  const backup=join(root,'.runtime','backups','update-test');
+  mkdirSync(join(backup,'files','web'),{recursive:true});
+  mkdirSync(join(root,'web'),{recursive:true});
+  writeFileSync(join(root,'web','app.js'),'current');
+  writeFileSync(join(backup,'files','web','app.js'),'tampered');
+  writeFileSync(join(backup,'journal.json'),JSON.stringify({root,entries:[{path:'web/app.js',existed:true,backupSha256:createHash('sha256').update('original').digest('hex')}]}));
+  assert.throws(()=>restoreUpdate(root,backup),/integrity mismatch/);
+  assert.equal(readFileSync(join(root,'web','app.js'),'utf8'),'current');
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
